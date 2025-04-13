@@ -8,11 +8,37 @@ author: "Ashley Dickson"
 # Introduction
 In this document, I build several models of the heart failure data that are able to handle non-linearities in the predictors, generate predictions and perform model validation.
 
-```{r}
-library(tidyverse)
-library(ggplot2)
+# Setup
+## Environment
+Load the requisite libraries.
 
+```{r, warning=FALSE, message=FALSE}
+library(rms)
+library(dplyr)
+library(readxl)
+library(tidyverse)
+library(cardx)
+library(gtsummary)
+library(ggplot2)
+library(GGally)
+library(splines)
+library(broom)
+library(pROC)
+library(caret)
+library(corrplot)
+library(CalibrationCurves)
+library(knitr)
 ```
+
+## Data
+Having loaded the various libraries needed, let's import our heart failure data.
+
+```{r}
+setwd("C:/Users/rmhimdi/OneDrive - University College London/Documents/HeartFailure")
+df <- read_excel("simulateddata_LR_NL.xlsx")
+kable(head(df))
+```
+
 
 This is a Quarto website.
 To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
