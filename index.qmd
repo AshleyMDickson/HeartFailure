@@ -1,11 +1,18 @@
 ---
-title: "HeartFailure"
+title: "Heart Failure Analysis"
+subtitle: "Handling Nonlinearity & Model Validation"
+date: "23-04-2025"
+author: "Ashley Dickson"
 ---
 
-This is a Quarto website.
-
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+# Introduction
+In this document, I build several models of the heart failure data that are able to handle non-linearities in the predictors, generate predictions and perform model validation.
 
 ```{r}
-1 + 1
+library(tidyverse)
+library(ggplot2)
+
 ```
+
+This is a Quarto website.
+To learn more about Quarto websites visit <https://quarto.org/docs/websites>.

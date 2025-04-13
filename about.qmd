@@ -5,5 +5,8 @@ title: "About"
 About this site
 
 ```{r}
-1 + 1
+x = seq(0, 2*pi, by = 0.01)
+y = sin(x) + rnorm(length(x), 0, 0.3)
+plot(x,y) +
+  title("Sinusoidal Simulation")
 ```
