@@ -40,8 +40,13 @@ df <- read_excel("simulateddata_LR_NL.xlsx")
 Discretise age and recode sex.
 
 ```{r}
-df$outcome <- factor(df$outcome, levels = c(0, 1), labels = c("Survived", "Died"))
 df$age <- round(df$age, 0)
+n = 5
+df <- df %>%
+  mutate(Age_ = paste0(
+    n*floor(age/n), "-",n*(floor(age/n)+1)
+    )
+  )
 df$sex <- factor(df$sex, levels = c(0, 1), labels = c("Male", "Female")) 
 ## Assuming Female = 1 since this seems mildly protective (cf. MAGGIC), but will need to check.
 ```
@@ -79,8 +84,63 @@ Inspect the processed data.
 kable(head(df))
 ```
 
+### Hold Out
+During model evaluation, we will need to conduct predictive validation using the test set having estimated the model coefficients on the training set.
+
+```{r}
+set.seed(1729)
+records <- dim(df)[1]
+
+train_size <- floor(0.8*records)
+train_index <- sample(seq_len(records), size = train_size)
+train <- df[train_index,]
+test <- df[-train_index,]
+print(paste("Size of training set is: ", nrow(train)))
+print(paste("Size of testing set is: ", nrow(test)))
+```
+
 # Modelling
 
 ## Full Model
+Run the naive model with all variables to see outline effect sizes.
+
+```{r}
+#Sans age categorisation
+full_model <- glm(Outcome ~ Age + Sex  + Creatinine + Sodium + Potassium + Urea + S_bp + HR + Hb+ Diabetes + COPD + IHD + ValveDisease + NYHA_class + PeripheralOedema + AF + eGFR, family = binomial, data = df)
+print(summary(full_model))
+
+print("Odd Ratios")
+kable(exp(coef(full_model)))
+```
+
+While these Odds Ratios give us an outline picture of the effects, it is unlikely that all relationships are linear in the 'true' model. So, let's try a few ways of relaxing the linearity assumption.
+
+## Age
+Let's try to identify any nonlinear age effect. We can do this in a few different ways.
+
+### Categorisation
+Let's start by using the age quintiles. We run two models to compare:
+
+```{r}
+mod1 <- train %>% 
+  glm(formula = Outcome ~ Age, family = binomial)
+summary(mod1)
+```
+
+```{r}
+mod1 <- train %>% 
+  glm(formula = Outcome ~ Age_, family = binomial)
+summary(mod1)
+```
+
+### Splines
+
+```{r}
+mod3 <- glm(Outcome ~ ns(Age, df=3) + Sex  + ns(Creatinine, df=3) + Sodium + ns(Potassium, df=3) + ns(Urea, df=3) + S_bp + HR + Hb+ Diabetes + COPD + IHD + ValveDisease + NYHA_class + PeripheralOedema + AF + eGFR, family = binomial, data = train)
+print(summary(mod3))
+```
+
+### Hierarchical
+
 
 This is a Quarto website. To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
