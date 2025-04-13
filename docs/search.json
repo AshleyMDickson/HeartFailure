@@ -11,7 +11,7 @@
     "href": "about.html",
     "title": "About",
     "section": "",
-    "text": "This site has been set up as a temporary home for this analysis such that it can be shared with Clare, aka. Mein Otter.\n\nx = seq(0, 2*pi, by = 0.1)\ny = sin(x) + rnorm(length(x), 0, 0.3)\nplot(x,y) +\n  title(\"Sinusoidal Simulation\")\n\n\n\n\n\n\n\n\ninteger(0)"
+    "text": "This site has been set up as a temporary home for this analysis such that it can be shared with my supervisors.\nHow to do math in LaTeX:\nInline: \\(\\alpha\\)\nIndented:\n\\[\n\\hat{y}_i = \\beta_0 + \\sum_{j=1}^p \\beta_j x_{ji}\n\\]\n\nx = seq(0, 2*pi, by = 0.1)\ny = sin(x) + rnorm(length(x), 0, 0.3)\nplot(x,y) +\n  title(\"Sinusoidal Simulation\")\n\n\n\n\n\n\n\n\ninteger(0)"
   },
   {
     "objectID": "index.html#environment",

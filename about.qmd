@@ -2,7 +2,17 @@
 title: "About"
 ---
 
-This site has been set up as a temporary home for this analysis such that it can be shared with Clare, aka. Mein Otter.
+This site has been set up as a temporary home for this analysis such that it can be shared with my supervisors.
+
+How to do math in LaTeX:
+
+Inline: $\alpha$
+
+Indented:
+
+$$
+\hat{y}_i = \beta_0 + \sum_{j=1}^p \beta_j x_{ji}
+$$
 
 ```{r}
 x = seq(0, 2*pi, by = 0.1)
