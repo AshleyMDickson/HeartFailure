@@ -2,10 +2,10 @@
 title: "About"
 ---
 
-About this site
+This site has been set up as a temporary home for this analysis such that it can be shared with Clare, aka. Mein Otter.
 
 ```{r}
-x = seq(0, 2*pi, by = 0.01)
+x = seq(0, 2*pi, by = 0.1)
 y = sin(x) + rnorm(length(x), 0, 0.3)
 plot(x,y) +
   title("Sinusoidal Simulation")

@@ -1,15 +1,18 @@
 ---
 title: "Heart Failure Analysis"
 subtitle: "Handling Nonlinearity & Model Validation"
-date: "23-04-2025"
+date: "04-23-2025"
 author: "Ashley Dickson"
 ---
 
 # Introduction
+
 In this document, I build several models of the heart failure data that are able to handle non-linearities in the predictors, generate predictions and perform model validation.
 
 # Setup
+
 ## Environment
+
 Load the requisite libraries.
 
 ```{r, warning=FALSE, message=FALSE}
@@ -17,28 +20,67 @@ library(rms)
 library(dplyr)
 library(readxl)
 library(tidyverse)
-library(cardx)
 library(gtsummary)
 library(ggplot2)
-library(GGally)
 library(splines)
 library(broom)
 library(pROC)
-library(caret)
-library(corrplot)
-library(CalibrationCurves)
 library(knitr)
 ```
 
 ## Data
+
 Having loaded the various libraries needed, let's import our heart failure data.
 
 ```{r}
 setwd("C:/Users/rmhimdi/OneDrive - University College London/Documents/HeartFailure")
 df <- read_excel("simulateddata_LR_NL.xlsx")
+```
+
+Discretise age and recode sex.
+
+```{r}
+df$outcome <- factor(df$outcome, levels = c(0, 1), labels = c("Survived", "Died"))
+df$age <- round(df$age, 0)
+df$sex <- factor(df$sex, levels = c(0, 1), labels = c("Male", "Female")) 
+## Assuming Female = 1 since this seems mildly protective (cf. MAGGIC), but will need to check.
+```
+
+Renaming varibles.
+
+```{r}
+df <- 
+  df %>% 
+  rename(
+    Outcome = outcome,
+    Age = age,
+    Sex = sex,
+    Creatinine = creatineDischarge,
+    Sodium = sodiumDischarge,
+    Potassium = potassiumDischarge,
+    Urea = ureaDischarge,
+    S_bp =  sbpAdmission,
+    HR = hrAdmission,
+    Hb = hbDischarge,
+    Diabetes = diabetes,
+    COPD = copd,
+    IHD = ihd, 
+    ValveDisease = valveDisease,
+    NYHA_class = nyha,
+    PeripheralOedema = peripheralOedema,
+    AF = af,
+    eGFR = egfr_full
+  )
+```
+
+Inspect the processed data.
+
+```{r}
 kable(head(df))
 ```
 
+# Modelling
 
-This is a Quarto website.
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+## Full Model
+
+This is a Quarto website. To learn more about Quarto websites visit <https://quarto.org/docs/websites>.

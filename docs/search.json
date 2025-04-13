@@ -11,20 +11,27 @@
     "href": "about.html",
     "title": "About",
     "section": "",
-    "text": "About this site\n\nx = seq(0, 2*pi, by = 0.01)\ny = sin(x) + rnorm(length(x), 0, 0.3)\nplot(x,y) +\n  title(\"Sinusoidal Simulation\")\n\n\n\n\n\n\n\n\ninteger(0)"
+    "text": "This site has been set up as a temporary home for this analysis such that it can be shared with Clare, aka. Mein Otter.\n\nx = seq(0, 2*pi, by = 0.1)\ny = sin(x) + rnorm(length(x), 0, 0.3)\nplot(x,y) +\n  title(\"Sinusoidal Simulation\")\n\n\n\n\n\n\n\n\ninteger(0)"
   },
   {
     "objectID": "index.html#environment",
     "href": "index.html#environment",
     "title": "Heart Failure Analysis",
     "section": "Environment",
-    "text": "Environment\nLoad the requisite libraries.\n\nlibrary(rms)\nlibrary(dplyr)\nlibrary(readxl)\nlibrary(tidyverse)\nlibrary(cardx)\nlibrary(gtsummary)\nlibrary(ggplot2)\nlibrary(GGally)\nlibrary(splines)\nlibrary(broom)\nlibrary(pROC)\nlibrary(caret)\nlibrary(corrplot)\nlibrary(CalibrationCurves)\nlibrary(knitr)"
+    "text": "Environment\nLoad the requisite libraries.\n\nlibrary(rms)\nlibrary(dplyr)\nlibrary(readxl)\nlibrary(tidyverse)\nlibrary(gtsummary)\nlibrary(ggplot2)\nlibrary(splines)\nlibrary(broom)\nlibrary(pROC)\nlibrary(knitr)"
   },
   {
     "objectID": "index.html#data",
     "href": "index.html#data",
     "title": "Heart Failure Analysis",
     "section": "Data",
-    "text": "Data\nHaving loaded the various libraries needed, let’s import our heart failure data.\n\nsetwd(\"C:/Users/rmhimdi/OneDrive - University College London/Documents/HeartFailure\")\ndf &lt;- read_excel(\"simulateddata_LR_NL.xlsx\")\nkable(head(df))\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\noutcome\nage\ncreatineDischarge\nsodiumDischarge\npotassiumDischarge\nureaDischarge\nsbpAdmission\nhrAdmission\nhbDischarge\nsex\ndiabetes\ncopd\nihd\nvalveDisease\nnyha\nperipheralOedema\naf\negfr_full\n\n\n\n\n0\n62.3\n76.99999\n138\n4.2\n19.6100\n113\n119\n11.1\n0\n1\n0\n1\n0\n1\n0\n1\n88.70592\n\n\n1\n90.2\n142.00003\n146\n4.4\n20.9000\n98\n78\n12.1\n0\n0\n0\n1\n1\n0\n0\n0\n40.60656\n\n\n1\n83.6\n143.00003\n141\n4.0\n15.7056\n132\n102\n13.7\n0\n0\n1\n0\n0\n1\n1\n0\n40.90517\n\n\n0\n74.6\n80.00000\n137\n4.0\n7.5000\n152\n100\n11.6\n1\n0\n0\n0\n0\n1\n1\n0\n60.71780\n\n\n0\n83.5\n123.99999\n139\n4.2\n8.2000\n201\n46\n11.8\n1\n0\n0\n1\n0\n0\n0\n0\n35.78796\n\n\n0\n78.5\n118.00001\n140\n4.7\n12.7000\n104\n64\n10.6\n1\n0\n0\n0\n0\n1\n1\n1\n38.37403\n\n\n\n\n\nThis is a Quarto website. To learn more about Quarto websites visit https://quarto.org/docs/websites."
+    "text": "Data\nHaving loaded the various libraries needed, let’s import our heart failure data.\n\nsetwd(\"C:/Users/rmhimdi/OneDrive - University College London/Documents/HeartFailure\")\ndf &lt;- read_excel(\"simulateddata_LR_NL.xlsx\")\n\nDiscretise age and recode sex.\n\ndf$outcome &lt;- factor(df$outcome, levels = c(0, 1), labels = c(\"Survived\", \"Died\"))\ndf$age &lt;- round(df$age, 0)\ndf$sex &lt;- factor(df$sex, levels = c(0, 1), labels = c(\"Male\", \"Female\")) \n## Assuming Female = 1 since this seems mildly protective (cf. MAGGIC), but will need to check.\n\nRenaming varibles.\n\ndf &lt;- \n  df %&gt;% \n  rename(\n    Outcome = outcome,\n    Age = age,\n    Sex = sex,\n    Creatinine = creatineDischarge,\n    Sodium = sodiumDischarge,\n    Potassium = potassiumDischarge,\n    Urea = ureaDischarge,\n    S_bp =  sbpAdmission,\n    HR = hrAdmission,\n    Hb = hbDischarge,\n    Diabetes = diabetes,\n    COPD = copd,\n    IHD = ihd, \n    ValveDisease = valveDisease,\n    NYHA_class = nyha,\n    PeripheralOedema = peripheralOedema,\n    AF = af,\n    eGFR = egfr_full\n  )\n\nInspect the processed data.\n\nkable(head(df))\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nOutcome\nAge\nCreatinine\nSodium\nPotassium\nUrea\nS_bp\nHR\nHb\nSex\nDiabetes\nCOPD\nIHD\nValveDisease\nNYHA_class\nPeripheralOedema\nAF\neGFR\n\n\n\n\nSurvived\n62\n76.99999\n138\n4.2\n19.6100\n113\n119\n11.1\nMale\n1\n0\n1\n0\n1\n0\n1\n88.70592\n\n\nDied\n90\n142.00003\n146\n4.4\n20.9000\n98\n78\n12.1\nMale\n0\n0\n1\n1\n0\n0\n0\n40.60656\n\n\nDied\n84\n143.00003\n141\n4.0\n15.7056\n132\n102\n13.7\nMale\n0\n1\n0\n0\n1\n1\n0\n40.90517\n\n\nSurvived\n75\n80.00000\n137\n4.0\n7.5000\n152\n100\n11.6\nFemale\n0\n0\n0\n0\n1\n1\n0\n60.71780\n\n\nSurvived\n84\n123.99999\n139\n4.2\n8.2000\n201\n46\n11.8\nFemale\n0\n0\n1\n0\n0\n0\n0\n35.78796\n\n\nSurvived\n78\n118.00001\n140\n4.7\n12.7000\n104\n64\n10.6\nFemale\n0\n0\n0\n0\n1\n1\n1\n38.37403"
+  },
+  {
+    "objectID": "index.html#full-model",
+    "href": "index.html#full-model",
+    "title": "Heart Failure Analysis",
+    "section": "Full Model",
+    "text": "Full Model\nThis is a Quarto website. To learn more about Quarto websites visit https://quarto.org/docs/websites."
   }
 ]

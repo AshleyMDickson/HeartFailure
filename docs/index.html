@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Ashley Dickson">
-<meta name="dcterms.date" content="2026-11-04">
+<meta name="dcterms.date" content="2025-04-23">
 
 <title>Heart Failure Analysis</title>
 <style>
@@ -154,6 +154,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#environment" id="toc-environment" class="nav-link" data-scroll-target="#environment">Environment</a></li>
   <li><a href="#data" id="toc-data" class="nav-link" data-scroll-target="#data">Data</a></li>
   </ul></li>
+  <li><a href="#modelling" id="toc-modelling" class="nav-link" data-scroll-target="#modelling">Modelling</a>
+  <ul class="collapse">
+  <li><a href="#full-model" id="toc-full-model" class="nav-link" data-scroll-target="#full-model">Full Model</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -180,7 +184,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">November 4, 2026</p>
+      <p class="date">April 23, 2025</p>
     </div>
   </div>
   
@@ -206,17 +210,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readxl)</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(cardx)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gtsummary)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(GGally)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(splines)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(broom)</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pROC)</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(caret)</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(corrplot)</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(CalibrationCurves)</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gtsummary)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(splines)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(broom)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pROC)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="data" class="level2">
@@ -224,56 +223,91 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Having loaded the various libraries needed, let’s import our heart failure data.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">setwd</span>(<span class="st">"C:/Users/rmhimdi/OneDrive - University College London/Documents/HeartFailure"</span>)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="st">"simulateddata_LR_NL.xlsx"</span>)</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(<span class="fu">head</span>(df))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="st">"simulateddata_LR_NL.xlsx"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Discretise age and recode sex.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>df<span class="sc">$</span>outcome <span class="ot">&lt;-</span> <span class="fu">factor</span>(df<span class="sc">$</span>outcome, <span class="at">levels =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"Survived"</span>, <span class="st">"Died"</span>))</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>df<span class="sc">$</span>age <span class="ot">&lt;-</span> <span class="fu">round</span>(df<span class="sc">$</span>age, <span class="dv">0</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>df<span class="sc">$</span>sex <span class="ot">&lt;-</span> <span class="fu">factor</span>(df<span class="sc">$</span>sex, <span class="at">levels =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"Male"</span>, <span class="st">"Female"</span>)) </span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="do">## Assuming Female = 1 since this seems mildly protective (cf. MAGGIC), but will need to check.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Renaming varibles.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> </span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  df <span class="sc">%&gt;%</span> </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">Outcome =</span> outcome,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">Age =</span> age,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">Sex =</span> sex,</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">Creatinine =</span> creatineDischarge,</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">Sodium =</span> sodiumDischarge,</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">Potassium =</span> potassiumDischarge,</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">Urea =</span> ureaDischarge,</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">S_bp =</span>  sbpAdmission,</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">HR =</span> hrAdmission,</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">Hb =</span> hbDischarge,</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">Diabetes =</span> diabetes,</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">COPD =</span> copd,</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">IHD =</span> ihd, </span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">ValveDisease =</span> valveDisease,</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">NYHA_class =</span> nyha,</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">PeripheralOedema =</span> peripheralOedema,</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">AF =</span> af,</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">eGFR =</span> egfr_full</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Inspect the processed data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(<span class="fu">head</span>(df))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <table class="caption-top table table-sm table-striped small">
 <colgroup>
-<col style="width: 4%">
+<col style="width: 6%">
 <col style="width: 2%">
-<col style="width: 9%">
-<col style="width: 8%">
-<col style="width: 10%">
 <col style="width: 7%">
-<col style="width: 6%">
-<col style="width: 6%">
-<col style="width: 6%">
-<col style="width: 2%">
 <col style="width: 4%">
+<col style="width: 7%">
+<col style="width: 5%">
+<col style="width: 3%">
 <col style="width: 2%">
-<col style="width: 2%">
+<col style="width: 3%">
+<col style="width: 4%">
 <col style="width: 6%">
+<col style="width: 3%">
 <col style="width: 2%">
 <col style="width: 9%">
-<col style="width: 1%">
-<col style="width: 5%">
+<col style="width: 7%">
+<col style="width: 12%">
+<col style="width: 2%">
+<col style="width: 6%">
 </colgroup>
 <thead>
 <tr class="header">
-<th style="text-align: right;">outcome</th>
-<th style="text-align: right;">age</th>
-<th style="text-align: right;">creatineDischarge</th>
-<th style="text-align: right;">sodiumDischarge</th>
-<th style="text-align: right;">potassiumDischarge</th>
-<th style="text-align: right;">ureaDischarge</th>
-<th style="text-align: right;">sbpAdmission</th>
-<th style="text-align: right;">hrAdmission</th>
-<th style="text-align: right;">hbDischarge</th>
-<th style="text-align: right;">sex</th>
-<th style="text-align: right;">diabetes</th>
-<th style="text-align: right;">copd</th>
-<th style="text-align: right;">ihd</th>
-<th style="text-align: right;">valveDisease</th>
-<th style="text-align: right;">nyha</th>
-<th style="text-align: right;">peripheralOedema</th>
-<th style="text-align: right;">af</th>
-<th style="text-align: right;">egfr_full</th>
+<th style="text-align: left;">Outcome</th>
+<th style="text-align: right;">Age</th>
+<th style="text-align: right;">Creatinine</th>
+<th style="text-align: right;">Sodium</th>
+<th style="text-align: right;">Potassium</th>
+<th style="text-align: right;">Urea</th>
+<th style="text-align: right;">S_bp</th>
+<th style="text-align: right;">HR</th>
+<th style="text-align: right;">Hb</th>
+<th style="text-align: left;">Sex</th>
+<th style="text-align: right;">Diabetes</th>
+<th style="text-align: right;">COPD</th>
+<th style="text-align: right;">IHD</th>
+<th style="text-align: right;">ValveDisease</th>
+<th style="text-align: right;">NYHA_class</th>
+<th style="text-align: right;">PeripheralOedema</th>
+<th style="text-align: right;">AF</th>
+<th style="text-align: right;">eGFR</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">62.3</td>
+<td style="text-align: left;">Survived</td>
+<td style="text-align: right;">62</td>
 <td style="text-align: right;">76.99999</td>
 <td style="text-align: right;">138</td>
 <td style="text-align: right;">4.2</td>
@@ -281,7 +315,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: right;">113</td>
 <td style="text-align: right;">119</td>
 <td style="text-align: right;">11.1</td>
-<td style="text-align: right;">0</td>
+<td style="text-align: left;">Male</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
@@ -292,8 +326,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: right;">88.70592</td>
 </tr>
 <tr class="even">
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">90.2</td>
+<td style="text-align: left;">Died</td>
+<td style="text-align: right;">90</td>
 <td style="text-align: right;">142.00003</td>
 <td style="text-align: right;">146</td>
 <td style="text-align: right;">4.4</td>
@@ -301,7 +335,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: right;">98</td>
 <td style="text-align: right;">78</td>
 <td style="text-align: right;">12.1</td>
-<td style="text-align: right;">0</td>
+<td style="text-align: left;">Male</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
@@ -312,8 +346,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: right;">40.60656</td>
 </tr>
 <tr class="odd">
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">83.6</td>
+<td style="text-align: left;">Died</td>
+<td style="text-align: right;">84</td>
 <td style="text-align: right;">143.00003</td>
 <td style="text-align: right;">141</td>
 <td style="text-align: right;">4.0</td>
@@ -321,7 +355,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: right;">132</td>
 <td style="text-align: right;">102</td>
 <td style="text-align: right;">13.7</td>
-<td style="text-align: right;">0</td>
+<td style="text-align: left;">Male</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">0</td>
@@ -332,8 +366,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: right;">40.90517</td>
 </tr>
 <tr class="even">
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">74.6</td>
+<td style="text-align: left;">Survived</td>
+<td style="text-align: right;">75</td>
 <td style="text-align: right;">80.00000</td>
 <td style="text-align: right;">137</td>
 <td style="text-align: right;">4.0</td>
@@ -341,7 +375,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: right;">152</td>
 <td style="text-align: right;">100</td>
 <td style="text-align: right;">11.6</td>
-<td style="text-align: right;">1</td>
+<td style="text-align: left;">Female</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
@@ -352,8 +386,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: right;">60.71780</td>
 </tr>
 <tr class="odd">
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">83.5</td>
+<td style="text-align: left;">Survived</td>
+<td style="text-align: right;">84</td>
 <td style="text-align: right;">123.99999</td>
 <td style="text-align: right;">139</td>
 <td style="text-align: right;">4.2</td>
@@ -361,7 +395,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: right;">201</td>
 <td style="text-align: right;">46</td>
 <td style="text-align: right;">11.8</td>
-<td style="text-align: right;">1</td>
+<td style="text-align: left;">Female</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
@@ -372,8 +406,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: right;">35.78796</td>
 </tr>
 <tr class="even">
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">78.5</td>
+<td style="text-align: left;">Survived</td>
+<td style="text-align: right;">78</td>
 <td style="text-align: right;">118.00001</td>
 <td style="text-align: right;">140</td>
 <td style="text-align: right;">4.7</td>
@@ -381,7 +415,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: right;">104</td>
 <td style="text-align: right;">64</td>
 <td style="text-align: right;">10.6</td>
-<td style="text-align: right;">1</td>
+<td style="text-align: left;">Female</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
@@ -395,6 +429,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 </div>
 </div>
+</section>
+</section>
+<section id="modelling" class="level1">
+<h1>Modelling</h1>
+<section id="full-model" class="level2">
+<h2 class="anchored" data-anchor-id="full-model">Full Model</h2>
 <p>This is a Quarto website. To learn more about Quarto websites visit <a href="https://quarto.org/docs/websites" class="uri">https://quarto.org/docs/websites</a>.</p>
 
 
