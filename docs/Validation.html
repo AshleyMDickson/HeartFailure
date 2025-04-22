@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>About – Heart Failure Analysis</title>
+<title>Validation – Heart Failure Analysis</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -101,35 +101,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
-  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
-
-<script type="text/javascript">
-const typesetMath = (el) => {
-  if (window.MathJax) {
-    // MathJax Typeset
-    window.MathJax.typeset([el]);
-  } else if (window.katex) {
-    // KaTeX Render
-    var mathElements = el.getElementsByClassName("math");
-    var macros = [];
-    for (var i = 0; i < mathElements.length; i++) {
-      var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN") {
-        window.katex.render(texText.data, mathElements[i], {
-          displayMode: mathElements[i].classList.contains('display'),
-          throwOnError: false,
-          macros: macros,
-          fleqn: false
-        });
-      }
-    }
-  }
-}
-window.Quarto = {
-  typesetMath
-};
-</script>
 
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -156,11 +127,11 @@ window.Quarto = {
 <span class="menu-text">Model</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./Validation.html"> 
+    <a class="nav-link active" href="./Validation.html" aria-current="page"> 
 <span class="menu-text">Validation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="./about.html" aria-current="page"> 
+    <a class="nav-link" href="./about.html"> 
 <span class="menu-text">About</span></a>
   </li>  
 </ul>
@@ -174,15 +145,25 @@ window.Quarto = {
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-        
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#data-preparation-and-splitting" id="toc-data-preparation-and-splitting" class="nav-link active" data-scroll-target="#data-preparation-and-splitting">Data Preparation and Splitting</a></li>
+  <li><a href="#model-fitting-training-set-with-non-linear-age" id="toc-model-fitting-training-set-with-non-linear-age" class="nav-link" data-scroll-target="#model-fitting-training-set-with-non-linear-age">Model Fitting (Training Set) with Non-linear Age</a></li>
+  <li><a href="#discrimination-roc-and-auc-test-set" id="toc-discrimination-roc-and-auc-test-set" class="nav-link" data-scroll-target="#discrimination-roc-and-auc-test-set">Discrimination (ROC and AUC) – Test Set</a></li>
+  <li><a href="#calibration-smoothed-test-set" id="toc-calibration-smoothed-test-set" class="nav-link" data-scroll-target="#calibration-smoothed-test-set">Calibration – Smoothed (Test Set)</a></li>
+  <li><a href="#goodness-of-fit-summary-training-vs-test-set" id="toc-goodness-of-fit-summary-training-vs-test-set" class="nav-link" data-scroll-target="#goodness-of-fit-summary-training-vs-test-set">Goodness-of-Fit Summary: Training vs Test Set</a></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">About</h1>
+<h1 class="title">Validation</h1>
 </div>
 
 
@@ -199,31 +180,146 @@ window.Quarto = {
 </header>
 
 
-<p>This site has been set up as a temporary home for this analysis such that it can be shared with my supervisors.</p>
-<p>How to do math in LaTeX:</p>
-<p>Inline: <span class="math inline">\(\alpha\)</span></p>
-<p>Indented:</p>
-<p><span class="math display">\[
-\hat{y}_i = \beta_0 + \sum_{j=1}^p \beta_j x_{ji}
-\]</span></p>
+<section id="data-preparation-and-splitting" class="level2">
+<h2 class="anchored" data-anchor-id="data-preparation-and-splitting">Data Preparation and Splitting</h2>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">=</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">2</span><span class="sc">*</span>pi, <span class="at">by =</span> <span class="fl">0.1</span>)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>y <span class="ot">=</span> <span class="fu">sin</span>(x) <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="fu">length</span>(x), <span class="dv">0</span>, <span class="fl">0.3</span>)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(x,y) <span class="sc">+</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">title</span>(<span class="st">"Sinusoidal Simulation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>hf_data <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="st">"simulateddata_LR_NL.xlsx"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">Outcome =</span> outcome,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">Age =</span> age,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">Sex =</span> sex,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">Creatinine =</span> creatineDischarge,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">Sodium =</span> sodiumDischarge,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">Potassium =</span> potassiumDischarge,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">Urea =</span> ureaDischarge,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">S_bp =</span>  sbpAdmission,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">HR =</span> hrAdmission,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">Hb =</span> hbDischarge,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">Diabetes =</span> diabetes,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">COPD =</span> copd,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">IHD =</span> ihd, </span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">ValveDisease =</span> valveDisease,</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">NYHA_class =</span> nyha,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">PeripheralOedema =</span> peripheralOedema,</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">AF =</span> af,</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">eGFR =</span> egfr_full</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>train_indices <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(hf_data)), <span class="at">size =</span> <span class="fl">0.7</span> <span class="sc">*</span> <span class="fu">nrow</span>(hf_data))</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>hf_train <span class="ot">&lt;-</span> hf_data[train_indices, ]</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>hf_test  <span class="ot">&lt;-</span> hf_data[<span class="sc">-</span>train_indices, ]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="model-fitting-training-set-with-non-linear-age" class="level2">
+<h2 class="anchored" data-anchor-id="model-fitting-training-set-with-non-linear-age">Model Fitting (Training Set) with Non-linear Age</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>dd <span class="ot">&lt;-</span> <span class="fu">datadist</span>(hf_train)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">datadist =</span> <span class="st">"dd"</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>model_train <span class="ot">&lt;-</span> <span class="fu">lrm</span>(Outcome <span class="sc">~</span> </span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>                     <span class="fu">rcs</span>(Age, <span class="dv">4</span>) <span class="sc">+</span> </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>                     Sex <span class="sc">+</span> </span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>                     <span class="fu">rcs</span>(Urea, <span class="dv">4</span>) <span class="sc">+</span> </span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>                     <span class="fu">rcs</span>(Creatinine, <span class="dv">4</span>) <span class="sc">+</span> </span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>                     <span class="fu">rcs</span>(Potassium, <span class="dv">4</span>) <span class="sc">+</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>                     IHD <span class="sc">+</span> COPD <span class="sc">+</span> Diabetes <span class="sc">+</span> ValveDisease <span class="sc">+</span> NYHA_class,</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>                   <span class="at">data =</span> hf_train,</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>                   <span class="at">x =</span> <span class="cn">TRUE</span>, <span class="at">y =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="discrimination-roc-and-auc-test-set" class="level2">
+<h2 class="anchored" data-anchor-id="discrimination-roc-and-auc-test-set">Discrimination (ROC and AUC) – Test Set</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>pred_test <span class="ot">&lt;-</span> <span class="fu">predict</span>(model_train, <span class="at">newdata =</span> hf_test, <span class="at">type =</span> <span class="st">"fitted"</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>roc_test <span class="ot">&lt;-</span> <span class="fu">roc</span>(hf_test<span class="sc">$</span>Outcome, pred_test)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>auc_test <span class="ot">&lt;-</span> <span class="fu">auc</span>(roc_test)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>roc_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">specificity =</span> roc_test<span class="sc">$</span>specificities,</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">sensitivity =</span> roc_test<span class="sc">$</span>sensitivities</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(roc_df, <span class="fu">aes</span>(<span class="at">x =</span> <span class="dv">1</span> <span class="sc">-</span> specificity, <span class="at">y =</span> sensitivity)) <span class="sc">+</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">color =</span> <span class="st">"steelblue"</span>, <span class="at">size =</span> <span class="fl">1.2</span>) <span class="sc">+</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Test Set ROC Curve (AUC ="</span>, <span class="fu">round</span>(auc_test, <span class="dv">3</span>), <span class="st">")"</span>),</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"1 - Specificity"</span>, <span class="at">y =</span> <span class="st">"Sensitivity"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="about_files/figure-html/unnamed-chunk-1-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="Validation_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
+</div>
+</section>
+<section id="calibration-smoothed-test-set" class="level2">
+<h2 class="anchored" data-anchor-id="calibration-smoothed-test-set">Calibration – Smoothed (Test Set)</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>calib_df <span class="ot">&lt;-</span> hf_test <span class="sc">%&gt;%</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">pred =</span> pred_test)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(calib_df, <span class="fu">aes</span>(<span class="at">x =</span> pred, <span class="at">y =</span> Outcome)) <span class="sc">+</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"loess"</span>, <span class="at">se =</span> <span class="cn">TRUE</span>, <span class="at">color =</span> <span class="st">"firebrick"</span>, <span class="at">fill =</span> <span class="st">"pink"</span>, <span class="at">span =</span> <span class="fl">0.75</span>) <span class="sc">+</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Calibration Curve (Test Set)"</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Predicted Probability"</span>,</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Observed Mortality"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Validation_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="goodness-of-fit-summary-training-vs-test-set" class="level2">
+<h2 class="anchored" data-anchor-id="goodness-of-fit-summary-training-vs-test-set">Goodness-of-Fit Summary: Training vs Test Set</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Training set predictions</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>pred_train <span class="ot">&lt;-</span> <span class="fu">predict</span>(model_train, <span class="at">type =</span> <span class="st">"fitted"</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Brier Score</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>brier_train <span class="ot">&lt;-</span> <span class="fu">mean</span>((hf_train<span class="sc">$</span>Outcome <span class="sc">-</span> pred_train)<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>brier_test <span class="ot">&lt;-</span> <span class="fu">mean</span>((hf_test<span class="sc">$</span>Outcome <span class="sc">-</span> pred_test)<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Calibration slope and intercept (test set)</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>cal_slope_model <span class="ot">&lt;-</span> <span class="fu">glm</span>(Outcome <span class="sc">~</span> <span class="fu">offset</span>(<span class="fu">qlogis</span>(pred_test)), <span class="at">data =</span> hf_test, <span class="at">family =</span> binomial)</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>cal_intercept_model <span class="ot">&lt;-</span> <span class="fu">glm</span>(Outcome <span class="sc">~</span> <span class="fu">I</span>(<span class="fu">qlogis</span>(pred_test)), <span class="at">data =</span> hf_test, <span class="at">family =</span> binomial)</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>cal_slope <span class="ot">&lt;-</span> <span class="fu">coef</span>(cal_slope_model)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>cal_intercept <span class="ot">&lt;-</span> <span class="fu">coef</span>(cal_intercept_model)</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="co"># AUC</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>roc_train <span class="ot">&lt;-</span> <span class="fu">roc</span>(hf_train<span class="sc">$</span>Outcome, pred_train)</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>auc_train <span class="ot">&lt;-</span> <span class="fu">auc</span>(roc_train)</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Summary table</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>summary_df <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">tibble</span>(</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">Metric =</span> <span class="fu">c</span>(<span class="st">"AUROC"</span>, <span class="st">"Calibration Intercept"</span>, <span class="st">"Calibration Slope"</span>, <span class="st">"Brier Score"</span>),</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Training Set</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="fu">round</span>(auc_train, <span class="dv">3</span>), <span class="dv">0</span>, <span class="dv">1</span>, <span class="fu">round</span>(brier_train, <span class="dv">3</span>)),</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Test Set</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="fu">round</span>(auc_test, <span class="dv">3</span>), <span class="fu">round</span>(cal_intercept[<span class="dv">1</span>], <span class="dv">3</span>), <span class="fu">round</span>(cal_slope[<span class="dv">1</span>], <span class="dv">3</span>), <span class="fu">round</span>(brier_test, <span class="dv">3</span>))</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>summary_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>integer(0)</code></pre>
+<pre><code># A tibble: 4 × 3
+  Metric                `Training Set` `Test Set`
+  &lt;chr&gt;                          &lt;dbl&gt;      &lt;dbl&gt;
+1 AUROC                          0.768      0.769
+2 Calibration Intercept          0          0.033
+3 Calibration Slope              1          0.01 
+4 Brier Score                    0.088      0.088</code></pre>
 </div>
 </div>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
