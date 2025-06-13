@@ -1,0 +1,10 @@
+---
+title: "Uncertainty"
+---
+
+```{r}
+a <- runif(1000, -pi, pi)
+b <- rnorm(1000, 0, 0.3) + sin(a)
+plot(a, b)
+```
+

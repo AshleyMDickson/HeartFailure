@@ -10,6 +10,7 @@ website:
         text: Model
       - Validation.qmd
       - about.qmd
+      - uncertainty.qmd
 
 format:
   html:

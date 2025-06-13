@@ -82,5 +82,12 @@
     "title": "Validation",
     "section": "Goodness-of-Fit Summary: Training vs Test Set",
     "text": "Goodness-of-Fit Summary: Training vs Test Set\n\n# Training set predictions\npred_train &lt;- predict(model_train, type = \"fitted\")\n\n# Brier Score\nbrier_train &lt;- mean((hf_train$Outcome - pred_train)^2)\nbrier_test &lt;- mean((hf_test$Outcome - pred_test)^2)\n\n# Calibration slope and intercept (test set)\ncal_slope_model &lt;- glm(Outcome ~ offset(qlogis(pred_test)), data = hf_test, family = binomial)\ncal_intercept_model &lt;- glm(Outcome ~ I(qlogis(pred_test)), data = hf_test, family = binomial)\n\ncal_slope &lt;- coef(cal_slope_model)\ncal_intercept &lt;- coef(cal_intercept_model)\n\n# AUC\nroc_train &lt;- roc(hf_train$Outcome, pred_train)\nauc_train &lt;- auc(roc_train)\n\n# Summary table\nsummary_df &lt;- tibble::tibble(\n  Metric = c(\"AUROC\", \"Calibration Intercept\", \"Calibration Slope\", \"Brier Score\"),\n  `Training Set` = c(round(auc_train, 3), 0, 1, round(brier_train, 3)),\n  `Test Set` = c(round(auc_test, 3), round(cal_intercept[1], 3), round(cal_slope[1], 3), round(brier_test, 3))\n)\n\nsummary_df\n\n# A tibble: 4 × 3\n  Metric                `Training Set` `Test Set`\n  &lt;chr&gt;                          &lt;dbl&gt;      &lt;dbl&gt;\n1 AUROC                          0.768      0.769\n2 Calibration Intercept          0          0.033\n3 Calibration Slope              1          0.01 \n4 Brier Score                    0.088      0.088"
+  },
+  {
+    "objectID": "uncertainty.html",
+    "href": "uncertainty.html",
+    "title": "Uncertainty",
+    "section": "",
+    "text": "a &lt;- runif(1000, -pi, pi)\nb &lt;- rnorm(1000, 0, 0.3) + sin(a)\nplot(a, b)"
   }
 ]
