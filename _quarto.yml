@@ -8,8 +8,9 @@ website:
     left:
       - href: index.qmd
         text: Model
-      - Validation.qmd
-      - about.qmd
+      #- Nonlinearity
+      #- Validation.qmd
+      #- about.qmd
       - uncertainty.qmd
 
 format:

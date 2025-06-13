@@ -1,0 +1,310 @@
+---
+title: "Nonlinearity"
+subtitle: "Handling Nonlinearity & Model Validation"
+date: "04-23-2025"
+author: "Ashley Dickson"
+---
+
+# Introduction
+
+In this document, I build several models of the heart failure data that are able to handle non-linearities in the predictors, generate predictions and perform model validation.
+
+# Setup
+
+## Environment
+
+Load the requisite libraries.
+
+```{r, warning=FALSE, message=FALSE}
+library(rms)
+library(dplyr)
+library(readxl)
+library(tidyverse)
+library(gtsummary)
+library(ggplot2)
+library(splines)
+library(broom)
+library(pROC)
+library(knitr)
+library(mgcv)
+library(patchwork)
+```
+
+## Data
+
+Having loaded the various libraries needed, let's import our heart failure data.
+
+```{r}
+setwd("C:/Users/rmhimdi/OneDrive - University College London/Documents/HeartFailure")
+df <- read_excel("simulateddata_LR_NL.xlsx")
+```
+
+Discretise age and recode sex.
+
+```{r}
+df$age <- round(df$age, 0)
+n = 5
+df <- df %>%
+  mutate(Age_ = paste0(
+    n*floor(age/n), "-",n*(floor(age/n)+1)
+    )
+  )
+#df$sex <- factor(df$sex, levels = c(0, 1), labels = c("Male", "Female")) 
+## Assuming Female = 1 since this seems mildly protective (cf. MAGGIC), but will need to check.
+```
+
+Renaming varibles.
+
+```{r}
+df <- 
+  df %>% 
+  rename(
+    Outcome = outcome,
+    Age = age,
+    Sex = sex,
+    Creatinine = creatineDischarge,
+    Sodium = sodiumDischarge,
+    Potassium = potassiumDischarge,
+    Urea = ureaDischarge,
+    S_bp =  sbpAdmission,
+    HR = hrAdmission,
+    Hb = hbDischarge,
+    Diabetes = diabetes,
+    COPD = copd,
+    IHD = ihd, 
+    ValveDisease = valveDisease,
+    NYHA_class = nyha,
+    PeripheralOedema = peripheralOedema,
+    AF = af,
+    eGFR = egfr_full
+  )
+```
+
+Inspect the processed data.
+
+```{r}
+kable(head(df))
+```
+
+### Hold Out
+During model evaluation, we will need to conduct predictive validation using the test set having estimated the model coefficients on the training set.
+
+```{r}
+set.seed(1729)
+records <- dim(df)[1]
+
+train_size <- floor(0.8*records)
+train_index <- sample(seq_len(records), size = train_size)
+train <- df[train_index,]
+test <- df[-train_index,]
+print(paste("Size of training set is: ", nrow(train)))
+print(paste("Size of testing set is: ", nrow(test)))
+```
+
+# Modelling
+
+## Full Model
+Run the naive model with all variables to see outline effect sizes.
+
+```{r}
+#Sans age categorisation
+full_model <- glm(Outcome ~ Age + Sex  + Creatinine + Sodium + Potassium + Urea + S_bp + HR + Hb+ Diabetes + COPD + IHD + ValveDisease + NYHA_class + PeripheralOedema + AF + eGFR, family = binomial, data = df)
+print(summary(full_model))
+
+print("Odd Ratios")
+kable(exp(coef(full_model)))
+```
+
+While these Odds Ratios give us an outline picture of the effects, it is unlikely that all relationships are linear in the 'true' model. So, let's try a few ways of relaxing the linearity assumption.
+
+## Age
+Let's try to identify any nonlinear age effect. We can do this in a few different ways.
+
+### Categorisation
+Let's start by using the age quintiles. We run two models to compare:
+
+```{r}
+mod1 <- train %>% 
+  glm(formula = Outcome ~ Age, family = binomial)
+summary(mod1)
+```
+
+```{r}
+mod1 <- train %>% 
+  glm(formula = Outcome ~ Age_, family = binomial)
+summary(mod1)
+```
+
+### Splines
+
+```{r}
+mod3 <- glm(Outcome ~ ns(Age, df=3) + Sex  + ns(Creatinine, df=3) + Sodium + ns(Potassium, df=3) + ns(Urea, df=3) + S_bp + HR + Hb+ Diabetes + COPD + IHD + ValveDisease + NYHA_class + PeripheralOedema + AF + eGFR, family = binomial, data = train)
+print(summary(mod3))
+```
+
+Having tried a few non-linear model options, it seems that we need a more systematic way to specify the functional form.
+
+For this, we can visualise the empirical distribution of the dependent variable by the candidate covariates and inspect the shape.
+
+```{r}
+gam_model <- gam(Outcome ~ s(Age) 
+                   #+ s(Sex) + s(Creatinine) + s(Sodium) + s(Potassium) + s(Urea) + s(S_bp) + s(HR) + s(Hb) +
+                   #s(Diabetes) + s(COPD) + s(IHD) + s(ValveDisease) + s(NYHA_class) + s(PeripheralOedema) + s(AF) + s(eGFR)
+                   #, family = binomial
+                 , data = df)
+plot(gam_model)
+```
+
+```{r}
+age_summary <- df %>%
+  group_by(Age) %>%
+  summarise(
+    n = n(),
+    deaths = sum(Outcome),
+    mortality_rate = deaths / n,
+    log_odds = log((mortality_rate) / (1 - mortality_rate))  # small offset to avoid log(0)
+  )
+
+ggplot(age_summary, aes(x = Age, y = log_odds)) +
+  geom_point(alpha = 0.6) +
+  geom_abline() +
+  geom_smooth(se = FALSE, method = "loess", span = 0.3) +
+  labs(
+    x = "Age",
+    y = "Empirical log-odds of mortality",
+    title = "Empirical log-odds of mortality by Age"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+plot_all_empirical_mortality_and_logodds <- function(data, outcome, min_n = 10, smooth_span = 0.3, n_bins = 10, stratify_by = "Age") {
+  
+  outcome_sym <- ensym(outcome)
+  outcome_chr <- rlang::as_string(outcome_sym)
+  strat_chr <- stratify_by
+  strat_sym <- sym(strat_chr)
+  
+  predictors <- setdiff(names(data), c(outcome_chr, strat_chr))
+  plots <- list()
+  
+  for (pred in predictors) {
+    predictor_sym <- ensym(pred)
+    pred_values <- data %>% pull(!!predictor_sym)
+    
+    # Skip if constant or fully missing
+    if (n_distinct(pred_values, na.rm = TRUE) <= 1) next
+    
+    is_binary <- all(pred_values %in% c(0, 1), na.rm = TRUE)
+    
+    if (is_binary) {
+      # Binary predictors now plotted against Age
+      df_binned <- data %>%
+        filter(!is.na(!!predictor_sym), !is.na(!!strat_sym), !is.na(!!outcome_sym)) %>%
+        mutate(age_bin = cut_number(!!strat_sym, n = n_bins)) %>%
+        group_by(!!predictor_sym, age_bin) %>%
+        summarise(
+          mean_age = mean(!!strat_sym, na.rm = TRUE),
+          n = n(),
+          deaths = sum(!!outcome_sym),
+          mortality_rate = deaths / n,
+          log_odds = log((mortality_rate + 1e-3) / (1 - mortality_rate + 1e-3)),
+          .groups = "drop"
+        ) %>%
+        filter(n >= min_n)
+      
+      p1 <- ggplot(df_binned, aes(x = mean_age, y = mortality_rate, color = factor(!!predictor_sym))) +
+        geom_point(alpha = 0.7) +
+        geom_line() +
+        labs(x = strat_chr, y = "Mortality rate", color = pred,
+             title = paste("Mortality by", strat_chr, "stratified by", pred)) +
+        theme_minimal()
+      
+      p2 <- ggplot(df_binned, aes(x = mean_age, y = log_odds, color = factor(!!predictor_sym))) +
+        geom_point(alpha = 0.7) +
+        geom_line() +
+        labs(x = strat_chr, y = "Log-odds of mortality", color = pred,
+             title = paste("Log-odds by", strat_chr, "stratified by", pred)) +
+        theme_minimal()
+      
+    } else {
+      # Regular continuous predictors
+      unique_vals <- n_distinct(pred_values, na.rm = TRUE)
+      
+      if (unique_vals > 5) {
+        data_binned <- data %>%
+          mutate(bin = cut_number(!!predictor_sym, n = n_bins))
+        
+        df_summary <- data_binned %>%
+          group_by(bin) %>%
+          summarise(
+            mean_value = mean(!!predictor_sym, na.rm = TRUE),
+            n = n(),
+            deaths = sum(!!outcome_sym),
+            mortality_rate = deaths / n,
+            log_odds = log((mortality_rate + 1e-3) / (1 - mortality_rate + 1e-3)),
+            .groups = "drop"
+          ) %>%
+          filter(n >= min_n)
+        
+        p1 <- ggplot(df_summary, aes(x = mean_value, y = mortality_rate)) +
+          geom_point(alpha = 0.6) +
+          geom_line() +
+          labs(x = pred, y = "Mortality rate", title = paste("Binned mortality by", pred)) +
+          theme_minimal()
+        
+        p2 <- ggplot(df_summary, aes(x = mean_value, y = log_odds)) +
+          geom_point(alpha = 0.6) +
+          geom_line() +
+          labs(x = pred, y = "Log-odds of mortality", title = paste("Binned log-odds by", pred)) +
+          theme_minimal()
+        
+      } else {
+        df_summary <- data %>%
+          group_by(value = !!predictor_sym) %>%
+          summarise(
+            n = n(),
+            deaths = sum(!!outcome_sym),
+            mortality_rate = deaths / n,
+            log_odds = log((mortality_rate + 1e-3) / (1 - mortality_rate + 1e-3)),
+            .groups = "drop"
+          ) %>%
+          filter(n >= min_n)
+        
+        p1 <- ggplot(df_summary, aes(x = value, y = mortality_rate)) +
+          geom_point(alpha = 0.6) +
+          geom_line() +
+          labs(x = pred, y = "Mortality rate", title = paste("Mortality by", pred)) +
+          theme_minimal()
+        
+        p2 <- ggplot(df_summary, aes(x = value, y = log_odds)) +
+          geom_point(alpha = 0.6) +
+          geom_line() +
+          labs(x = pred, y = "Log-odds of mortality", title = paste("Log-odds by", pred)) +
+          theme_minimal()
+      }
+    }
+    
+    plots[[pred]] <- p1 + p2
+  }
+  
+  return(plots)
+}
+
+```
+
+```{r}
+
+```
+
+
+```{r}
+df = subset(df, select = -c(Age_))
+plot_all_empirical_mortality_and_logodds(data = df, outcome = Outcome)
+```
+
+
+### Hierarchical
+
+
+This is a Quarto website. To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
