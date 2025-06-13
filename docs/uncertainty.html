@@ -6,8 +6,9 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
+<meta name="author" content="Ashley">
 
-<title>Uncertainty – Heart Failure Analysis</title>
+<title>Some Topics in Logistic Regression – Modelling Binary Outcomes</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -101,6 +102,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -113,7 +143,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a class="navbar-brand" href="./index.html">
-    <span class="navbar-title">Heart Failure Analysis</span>
+    <span class="navbar-title">Modelling Binary Outcomes</span>
     </a>
   </div>
             <div id="quarto-search" class="" title="Search"></div>
@@ -127,16 +157,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Model</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./Validation.html"> 
-<span class="menu-text">Validation</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./about.html"> 
-<span class="menu-text">About</span></a>
-  </li>  
-  <li class="nav-item">
     <a class="nav-link active" href="./uncertainty.html" aria-current="page"> 
-<span class="menu-text">Uncertainty</span></a>
+<span class="menu-text">Some Topics in Logistic Regression</span></a>
   </li>  
 </ul>
           </div> <!-- /navcollapse -->
@@ -149,21 +171,51 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-        
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#manual-exploration-of-logistic-regression" id="toc-manual-exploration-of-logistic-regression" class="nav-link active" data-scroll-target="#manual-exploration-of-logistic-regression">Manual Exploration of Logistic Regression</a>
+  <ul class="collapse">
+  <li><a href="#introduction" id="toc-introduction" class="nav-link" data-scroll-target="#introduction">1. Introduction</a></li>
+  <li><a href="#simulating-data" id="toc-simulating-data" class="nav-link" data-scroll-target="#simulating-data">2. Simulating Data</a></li>
+  <li><a href="#r-code" id="toc-r-code" class="nav-link" data-scroll-target="#r-code">R code:</a></li>
+  <li><a href="#logistic-model-and-likelihood" id="toc-logistic-model-and-likelihood" class="nav-link" data-scroll-target="#logistic-model-and-likelihood">3. Logistic Model and Likelihood</a></li>
+  <li><a href="#gradient-and-hessian" id="toc-gradient-and-hessian" class="nav-link" data-scroll-target="#gradient-and-hessian">4. Gradient and Hessian</a></li>
+  <li><a href="#r-code-for-gradient-and-hessian" id="toc-r-code-for-gradient-and-hessian" class="nav-link" data-scroll-target="#r-code-for-gradient-and-hessian">R code for Gradient and Hessian:</a></li>
+  <li><a href="#newton-raphson-algorithm" id="toc-newton-raphson-algorithm" class="nav-link" data-scroll-target="#newton-raphson-algorithm">5. Newton-Raphson Algorithm</a></li>
+  <li><a href="#r-implementation" id="toc-r-implementation" class="nav-link" data-scroll-target="#r-implementation">R implementation:</a></li>
+  <li><a href="#variance-of-estimates" id="toc-variance-of-estimates" class="nav-link" data-scroll-target="#variance-of-estimates">6. Variance of Estimates</a></li>
+  <li><a href="#bootstrap-validation" id="toc-bootstrap-validation" class="nav-link" data-scroll-target="#bootstrap-validation">7. Bootstrap Validation</a></li>
+  <li><a href="#bootstrap-r-code" id="toc-bootstrap-r-code" class="nav-link" data-scroll-target="#bootstrap-r-code">Bootstrap R code:</a></li>
+  <li><a href="#cross-validation" id="toc-cross-validation" class="nav-link" data-scroll-target="#cross-validation">8. Cross-validation</a></li>
+  <li><a href="#example-5-fold-cv-in-r" id="toc-example-5-fold-cv-in-r" class="nav-link" data-scroll-target="#example-5-fold-cv-in-r">Example 5-fold CV in R:</a></li>
+  <li><a href="#comparison-of-bootstrap-and-cross-validation" id="toc-comparison-of-bootstrap-and-cross-validation" class="nav-link" data-scroll-target="#comparison-of-bootstrap-and-cross-validation">9. Comparison of Bootstrap and Cross-validation</a></li>
+  <li><a href="#extensions-and-practical-considerations" id="toc-extensions-and-practical-considerations" class="nav-link" data-scroll-target="#extensions-and-practical-considerations">10. Extensions and Practical Considerations</a></li>
+  </ul></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Uncertainty</h1>
+<h1 class="title">Some Topics in Logistic Regression</h1>
+<p class="subtitle lead">Estimation, Uncertainty, and Validation</p>
 </div>
 
 
 
 <div class="quarto-title-meta">
 
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ashley </p>
+          </div>
+  </div>
     
   
     
@@ -174,20 +226,159 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="dv">1000</span>, <span class="sc">-</span>pi, pi)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">1000</span>, <span class="dv">0</span>, <span class="fl">0.3</span>) <span class="sc">+</span> <span class="fu">sin</span>(a)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(a, b)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="uncertainty_files/figure-html/unnamed-chunk-1-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-</div>
+<hr>
+<section id="manual-exploration-of-logistic-regression" class="level2">
+<h2 class="anchored" data-anchor-id="manual-exploration-of-logistic-regression">Manual Exploration of Logistic Regression</h2>
+<section id="introduction" class="level3">
+<h3 class="anchored" data-anchor-id="introduction">1. Introduction</h3>
+<p>We manually explore logistic regression, highlighting key concepts of estimation, uncertainty, and validation. We use a manually simulated dataset to illustrate each step clearly.</p>
+</section>
+<section id="simulating-data" class="level3">
+<h3 class="anchored" data-anchor-id="simulating-data">2. Simulating Data</h3>
+<p>We simulate data with one predictor:</p>
+<p><span class="math display">\[
+P(Y = 1 \mid X) = \frac{1}{1 + e^{-(\beta_0 + \beta_1 X)}}
+\]</span></p>
+<p>with parameters:</p>
+<ul>
+<li><span class="math inline">\(\beta_0 = -0.5\)</span></li>
+<li><span class="math inline">\(\beta_1 = 2\)</span>.</li>
+</ul>
+</section>
+<section id="r-code" class="level3">
+<h3 class="anchored" data-anchor-id="r-code">R code:</h3>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">100</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>beta_0 <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fl">0.5</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>beta_1 <span class="ot">&lt;-</span> <span class="dv">2</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>eta <span class="ot">&lt;-</span> beta_0 <span class="sc">+</span> beta_1 <span class="sc">*</span> x</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>prob <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta))</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, prob)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>sim_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(y, x)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<hr>
+</section>
+<section id="logistic-model-and-likelihood" class="level3">
+<h3 class="anchored" data-anchor-id="logistic-model-and-likelihood">3. Logistic Model and Likelihood</h3>
+<p>The logistic model is:</p>
+<p><span class="math display">\[
+P(Y = 1 \mid X, \beta) = \frac{1}{1 + e^{-X\beta}}
+\]</span></p>
+<p>Note: include likelihood version from written notes. Log-likelihood:</p>
+<p><span class="math display">\[
+\ell(\beta) = \sum_{i=1}^{n} \left[ y_i(X_i \beta) - \log(1 + e^{X_i \beta}) \right]
+\]</span></p>
+<hr>
+</section>
+<section id="gradient-and-hessian" class="level3">
+<h3 class="anchored" data-anchor-id="gradient-and-hessian">4. Gradient and Hessian</h3>
+<p>Gradient (score function):</p>
+<p><span class="math display">\[
+\nabla \ell(\beta) = X^T(y - p)
+\]</span></p>
+<p>Hessian:</p>
+<p><span class="math display">\[
+H(\beta) = -X^T W X
+\]</span></p>
+<p>where <span class="math inline">\(W\)</span> is diagonal with elements <span class="math inline">\(p_i(1 - p_i)\)</span>.</p>
+</section>
+<section id="r-code-for-gradient-and-hessian" class="level3">
+<h3 class="anchored" data-anchor-id="r-code-for-gradient-and-hessian">R code for Gradient and Hessian:</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="dv">1</span>, x)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>beta <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>eta <span class="ot">&lt;-</span> X <span class="sc">%*%</span> beta</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta))</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>gradient <span class="ot">&lt;-</span> <span class="fu">t</span>(X) <span class="sc">%*%</span> (y <span class="sc">-</span> p)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>W <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">as.vector</span>(p <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> p)))</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>hessian <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fu">t</span>(X) <span class="sc">%*%</span> W <span class="sc">%*%</span> X</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<hr>
+</section>
+<section id="newton-raphson-algorithm" class="level3">
+<h3 class="anchored" data-anchor-id="newton-raphson-algorithm">5. Newton-Raphson Algorithm</h3>
+<p>Iteration step:</p>
+<p><span class="math display">\[
+\beta_{\text{new}} = \beta_{\text{old}} - [H(\beta_{\text{old}})]^{-1} \nabla \ell(\beta_{\text{old}})
+\]</span></p>
+</section>
+<section id="r-implementation" class="level3">
+<h3 class="anchored" data-anchor-id="r-implementation">R implementation:</h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>beta <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>) {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> X <span class="sc">%*%</span> beta</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  p <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta))</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  gradient <span class="ot">&lt;-</span> <span class="fu">t</span>(X) <span class="sc">%*%</span> (y <span class="sc">-</span> p)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  W <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">as.vector</span>(p <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> p)))</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  hessian <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fu">t</span>(X) <span class="sc">%*%</span> W <span class="sc">%*%</span> X</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  beta <span class="ot">&lt;-</span> beta <span class="sc">-</span> <span class="fu">solve</span>(hessian) <span class="sc">%*%</span> gradient</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(beta)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<hr>
+</section>
+<section id="variance-of-estimates" class="level3">
+<h3 class="anchored" data-anchor-id="variance-of-estimates">6. Variance of Estimates</h3>
+<p>Estimated covariance matrix:</p>
+<p><span class="math display">\[
+\text{Var}(\hat{\beta}) = (X^T W X)^{-1}
+\]</span></p>
+<hr>
+</section>
+<section id="bootstrap-validation" class="level3">
+<h3 class="anchored" data-anchor-id="bootstrap-validation">7. Bootstrap Validation</h3>
+<p>Repeated sampling with replacement to estimate standard errors.</p>
+</section>
+<section id="bootstrap-r-code" class="level3">
+<h3 class="anchored" data-anchor-id="bootstrap-r-code">Bootstrap R code:</h3>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>B <span class="ot">&lt;-</span> <span class="dv">500</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>bootstrap_estimates <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, B, <span class="dv">2</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (b <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>B) {</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  idx <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span>n, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  X_b <span class="ot">&lt;-</span> X[idx, ]</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  y_b <span class="ot">&lt;-</span> y[idx]</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  beta_b <span class="ot">&lt;-</span> <span class="fu">glm</span>(y_b <span class="sc">~</span> X_b[,<span class="dv">2</span>], <span class="at">family=</span><span class="st">"binomial"</span>)<span class="sc">$</span>coefficients</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  bootstrap_estimates[b, ] <span class="ot">&lt;-</span> beta_b</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="fu">apply</span>(bootstrap_estimates, <span class="dv">2</span>, sd)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<hr>
+</section>
+<section id="cross-validation" class="level3">
+<h3 class="anchored" data-anchor-id="cross-validation">8. Cross-validation</h3>
+<p>Partition data into $K$ folds, train/test each fold.</p>
+</section>
+<section id="example-5-fold-cv-in-r" class="level3">
+<h3 class="anchored" data-anchor-id="example-5-fold-cv-in-r">Example 5-fold CV in R:</h3>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>K <span class="ot">&lt;-</span> <span class="dv">5</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>folds <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span>K, <span class="at">length.out =</span> n))</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>cv_error <span class="ot">&lt;-</span> <span class="fu">numeric</span>(K)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>K) {</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  train_idx <span class="ot">&lt;-</span> <span class="fu">which</span>(folds <span class="sc">!=</span> k)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  test_idx <span class="ot">&lt;-</span> <span class="fu">which</span>(folds <span class="sc">==</span> k)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  fit <span class="ot">&lt;-</span> <span class="fu">glm</span>(y <span class="sc">~</span> x, <span class="at">family=</span><span class="st">"binomial"</span>, <span class="at">data=</span>sim_data[train_idx,])</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  preds <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit, sim_data[test_idx,], <span class="at">type=</span><span class="st">"response"</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  cv_error[k] <span class="ot">&lt;-</span> <span class="fu">mean</span>((sim_data<span class="sc">$</span>y[test_idx] <span class="sc">-</span> preds)<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(cv_error)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<hr>
+</section>
+<section id="comparison-of-bootstrap-and-cross-validation" class="level3">
+<h3 class="anchored" data-anchor-id="comparison-of-bootstrap-and-cross-validation">9. Comparison of Bootstrap and Cross-validation</h3>
+<p>Discuss strengths/weaknesses:</p>
+<ul>
+<li>Bootstrap gives parameter uncertainty.</li>
+<li>CV provides estimate of prediction error.</li>
+</ul>
+<hr>
+</section>
+<section id="extensions-and-practical-considerations" class="level3">
+<h3 class="anchored" data-anchor-id="extensions-and-practical-considerations">10. Extensions and Practical Considerations</h3>
+<p>Discuss regularization and connections to real-world datasets, and further work.</p>
+<hr>
 
 
+</section>
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

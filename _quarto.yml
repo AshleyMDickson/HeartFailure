@@ -3,14 +3,11 @@ project:
   output-dir: docs
 
 website:
-  title: "Heart Failure Analysis"
+  title: "Modelling Binary Outcomes"
   navbar:
     left:
       - href: index.qmd
         text: Model
-      #- Nonlinearity
-      #- Validation.qmd
-      #- about.qmd
       - uncertainty.qmd
 
 format:

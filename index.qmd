@@ -1,12 +1,18 @@
 ---
-title: "Modelling Binary Outcomes"
+title: "Explorations in Binary Data"
 date: "06-13-2025"
 author: "Ashley Dickson"
 ---
 
 # Introduction
-Please navigate to <li class="masthead__menu-item"> <a href="https://ashleymdickson.github.io/HeartFailure/uncertainty.html">Uncertainty</a> </li>
+<p>
+Here I focus on measures of estimate uncertainty in Logistic Regression. Previous topics have been hidden for now.
+</p>
 
+<p>
+Please navigate to <a href="https://ashleymdickson.github.io/HeartFailure/uncertainty.html">Uncertainty</a>.
+</p>
 
-
+<p>
 This is a Quarto website. To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+</p>

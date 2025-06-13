@@ -1,10 +1,183 @@
 ---
-title: "Uncertainty"
+title: "Some Topics in Logistic Regression"
+subtitle: "Estimation, Uncertainty, and Validation"
 ---
 
-```{r}
-a <- runif(1000, -pi, pi)
-b <- rnorm(1000, 0, 0.3) + sin(a)
-plot(a, b)
+------------------------------------------------------------------------
+
+## Manual Exploration of Logistic Regression
+
+### 1. Introduction
+
+We manually explore logistic regression, highlighting key concepts of estimation, uncertainty, and validation. We use a manually simulated dataset to illustrate each step clearly.
+
+### 2. Simulating Data
+
+We simulate data with one predictor:
+
+$$
+P(Y = 1 \mid X) = \frac{1}{1 + e^{-(\beta_0 + \beta_1 X)}}
+$$
+
+with parameters:
+
+-   $\beta_0 = -0.5$
+-   $\beta_1 = 2$.
+
+### R code:
+
+``` r
+set.seed(123)
+n <- 100
+beta_0 <- -0.5
+beta_1 <- 2
+x <- rnorm(n)
+eta <- beta_0 + beta_1 * x
+prob <- 1 / (1 + exp(-eta))
+y <- rbinom(n, 1, prob)
+sim_data <- data.frame(y, x)
 ```
 
+------------------------------------------------------------------------
+
+### 3. Logistic Model and Likelihood
+
+The logistic model is:
+
+$$
+P(Y = 1 \mid X, \beta) = \frac{1}{1 + e^{-X\beta}}
+$$
+
+Note: include likelihood version from written notes. Log-likelihood:
+
+$$
+\ell(\beta) = \sum_{i=1}^{n} \left[ y_i(X_i \beta) - \log(1 + e^{X_i \beta}) \right]
+$$
+
+------------------------------------------------------------------------
+
+### 4. Gradient and Hessian
+
+Gradient (score function):
+
+$$
+\nabla \ell(\beta) = X^T(y - p)
+$$
+
+Hessian:
+
+$$
+H(\beta) = -X^T W X
+$$
+
+where $W$ is diagonal with elements $p_i(1 - p_i)$.
+
+### R code for Gradient and Hessian:
+
+``` r
+X <- cbind(1, x)
+beta <- c(0, 0)
+eta <- X %*% beta
+p <- 1 / (1 + exp(-eta))
+gradient <- t(X) %*% (y - p)
+W <- diag(as.vector(p * (1 - p)))
+hessian <- -t(X) %*% W %*% X
+```
+
+------------------------------------------------------------------------
+
+### 5. Newton-Raphson Algorithm
+
+Iteration step:
+
+$$
+\beta_{\text{new}} = \beta_{\text{old}} - [H(\beta_{\text{old}})]^{-1} \nabla \ell(\beta_{\text{old}})
+$$
+
+### R implementation:
+
+``` r
+beta <- c(0, 0)
+for (i in 1:10) {
+  eta <- X %*% beta
+  p <- 1 / (1 + exp(-eta))
+  gradient <- t(X) %*% (y - p)
+  W <- diag(as.vector(p * (1 - p)))
+  hessian <- -t(X) %*% W %*% X
+  beta <- beta - solve(hessian) %*% gradient
+}
+print(beta)
+```
+
+------------------------------------------------------------------------
+
+### 6. Variance of Estimates
+
+Estimated covariance matrix:
+
+$$
+\text{Var}(\hat{\beta}) = (X^T W X)^{-1}
+$$
+
+------------------------------------------------------------------------
+
+### 7. Bootstrap Validation
+
+Repeated sampling with replacement to estimate standard errors.
+
+### Bootstrap R code:
+
+``` r
+B <- 500
+bootstrap_estimates <- matrix(NA, B, 2)
+
+for (b in 1:B) {
+  idx <- sample(1:n, replace = TRUE)
+  X_b <- X[idx, ]
+  y_b <- y[idx]
+  beta_b <- glm(y_b ~ X_b[,2], family="binomial")$coefficients
+  bootstrap_estimates[b, ] <- beta_b
+}
+
+apply(bootstrap_estimates, 2, sd)
+```
+
+------------------------------------------------------------------------
+
+### 8. Cross-validation
+
+Partition data into \$K\$ folds, train/test each fold.
+
+### Example 5-fold CV in R:
+
+``` r
+K <- 5
+folds <- sample(rep(1:K, length.out = n))
+cv_error <- numeric(K)
+
+for (k in 1:K) {
+  train_idx <- which(folds != k)
+  test_idx <- which(folds == k)
+  fit <- glm(y ~ x, family="binomial", data=sim_data[train_idx,])
+  preds <- predict(fit, sim_data[test_idx,], type="response")
+  cv_error[k] <- mean((sim_data$y[test_idx] - preds)^2)
+}
+mean(cv_error)
+```
+
+------------------------------------------------------------------------
+
+### 9. Comparison of Bootstrap and Cross-validation
+
+Discuss strengths/weaknesses:
+
+-   Bootstrap gives parameter uncertainty.
+-   CV provides estimate of prediction error.
+
+------------------------------------------------------------------------
+
+### 10. Extensions and Practical Considerations
+
+Discuss regularization and connections to real-world datasets, and further work.
+
+------------------------------------------------------------------------
