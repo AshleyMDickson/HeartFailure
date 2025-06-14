@@ -5,29 +5,27 @@ subtitle: "Estimation, Uncertainty, and Validation"
 
 ------------------------------------------------------------------------
 
-## Manual Exploration of Logistic Regression
+# Logistic Regression, done manually
 
-### 1. Introduction
+## 1. Introduction
 
-We manually explore logistic regression, highlighting key concepts of estimation, uncertainty, and validation. We use a manually simulated dataset to illustrate each step clearly.
+Here I explore some topics in logistic regression manually, including techniques in estimation, uncertainty and validation. I'll generate a simulated dataset by way of illustration.
 
-### 2. Simulating Data
+## 2. Simulated Data
 
-We simulate data with one predictor:
+Create simple dataset from the logic model with one predictor
 
 $$
 P(Y = 1 \mid X) = \frac{1}{1 + e^{-(\beta_0 + \beta_1 X)}}
 $$
 
-with parameters:
+with parameters
 
 -   $\beta_0 = -0.5$
 -   $\beta_1 = 2$.
 
-### R code:
-
-``` r
-set.seed(123)
+```{r}
+set.seed(112358)
 n <- 100
 beta_0 <- -0.5
 beta_1 <- 2
@@ -35,34 +33,235 @@ x <- rnorm(n)
 eta <- beta_0 + beta_1 * x
 prob <- 1 / (1 + exp(-eta))
 y <- rbinom(n, 1, prob)
-sim_data <- data.frame(y, x)
+sim_data <- data.frame(y, x, prob)
+plot(sim_data$x, sim_data$y,
+     xlab = "Simulated x", ylab = "Simulated Y",
+     main = "Simulated data for Logistic Regression"
+)
 ```
 
 ------------------------------------------------------------------------
 
-### 3. Logistic Model and Likelihood
+## 3. Logistic Model and Estimation
 
-The logistic model is:
-
-$$
-P(Y = 1 \mid X, \beta) = \frac{1}{1 + e^{-X\beta}}
-$$
-
-Note: include likelihood version from written notes. Log-likelihood:
+Given a logit model of the form:
 
 $$
-\ell(\beta) = \sum_{i=1}^{n} \left[ y_i(X_i \beta) - \log(1 + e^{X_i \beta}) \right]
+\log\left(\frac{\pi_i}{1 - \pi_i}\right) = \eta_i,
+$$
+
+where
+
+$$
+\eta_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip}.
+$$
+
+We rearrange for $\pi_i$:
+
+$$
+\pi_i = \frac{\exp(\eta_i)}{1 + \exp(\eta_i)} = \frac{1}{1 + \exp(-\eta_i)}.
+$$
+
+Parameter estimates for $\beta_j$ are found firstly by deriving the likelihood function:
+
+$$
+L(\beta_j) = \prod_{i=1}^{n} \pi_i^{y_i} (1 - \pi_i)^{1 - y_i}
+$$
+
+where ( n ) is the number of observations. In MLE to goal is to maximize the log-likelihood:
+
+$$
+\log L = \ell(\beta_j) = \sum_{i=1}^{n} y_i \log(\pi_i) + (1 - y_i) \log(1 - \pi_i),
+$$
+
+$$
+= \sum_{i=1}^{n} \log(1 - \pi_i) + \sum_{i=1}^{n} y_i \left[ \log(\pi_i) - \log(1 - \pi_i) \right],
+$$
+
+$$
+= \sum_{i=1}^{n} \log(1 - \pi_i) + \sum_{i=1}^{n} y_i \log\left( \frac{\pi_i}{1 - \pi_i} \right).
+$$
+
+Since the logistic function is
+
+$$
+\pi_i = \frac{1}{1 + \exp(-\eta_i)},
+$$
+
+it follows that
+
+$$
+1 - \pi_i = 1 - \frac{1}{1 + \exp(-\eta_i)} = \frac{\exp(-\eta_i)}{1 + \exp(-\eta_i)}.
+$$
+
+We can take the odds:
+
+$$
+\frac{\pi_i}{1 - \pi_i} = \frac{\frac{1}{1 + \exp(-\eta_i)}}{\frac{\exp(-\eta_i)}{1 + \exp(-\eta_i)}} = \frac{1}{\exp(-\eta_i)} = \exp(\eta_i).
+$$
+
+Substitute this back into the previous equation:
+
+$$
+\mathcal{L} = \sum_{i=1}^{n} \left( \log(1 - \pi_i) + \sum_{j=1}^{p} y_i (\beta_0 + \beta_1 x_{i1} + \dots + \beta_p x_{ip}) \right),
+$$
+
+$$
+= \sum_{i=1}^{n} \left[ -\log(1 + \exp(\eta_i)) + \sum_{j=1}^{p} y_i \eta_i \right].
+$$
+
+Usually in MLE we differentiate and set to 0:
+
+$$
+\frac{\partial \ell}{\partial \beta_j} = \sum_{i=1}^{n} \frac{1}{1 + \exp(\eta_i)} \cdot \exp(\eta_i) x_{ij} + \sum_{i=1}^{n} y_i x_{ij},
+$$
+
+$$
+= \sum_{i=1}^{n} \frac{\exp(\eta_i)}{1 + \exp(\eta_i)} x_{ij} + \sum_{i=1}^{n} y_i x_{ij},
+$$
+
+$$
+= \sum_{i=1}^{n} (y_i - \pi_i) x_{ij} = 0.
+$$
+
+However, this has no closed-form solution, so numerical methods are used to estimate $beta\_j$, e.g. Newton-Raphson. For this, we first need to derive the Score Function and the Hessian.
+
+------------------------------------------------------------------------
+
+## 4. Gradient and Hessian
+
+To find the maxima, we firstly need to know how the log likelihood function varies w.r.t its $\beta$ parameters This is just its first derivative, called the Score Function:
+
+The likelihood function for the whole sample is:
+
+$$
+L(\boldsymbol{\beta}) = \prod_{i=1}^n \pi_i^{y_i} (1 - \pi_i)^{1 - y_i}
+$$
+
+Taking logs gives the log-likelihood:
+
+$$
+\ell(\boldsymbol{\beta}) = \sum_{i=1}^n \left[ y_i \log(\pi_i) + (1 - y_i) \log(1 - \pi_i) \right]
+$$
+
+### Differentiate it
+
+To find the derivative of $\ell(\boldsymbol{\beta})$ with respect to $\beta_1$, isolate a single observation
+
+$$
+\ell_i = y_i \log(\pi_i) + (1 - y_i) \log(1 - \pi_i)
+$$
+
+and note that the desired derivative is the product of three simpler derivatives via the chain rule:
+
+$$
+\frac{d\ell_i}{d\beta_1} 
+= \frac{d\ell_i}{d\pi_i} \cdot \frac{d\pi_i}{d\eta_i} \cdot \frac{d\eta_i}{d\beta_1}
+$$
+
+Theese derivatives evaluate as:
+
+-   Derivative with respect to $\pi_i$ follows from the derivative of logs:
+
+    $$
+    \frac{d\ell_i}{d\pi_i} = \frac{y_i}{\pi_i} - \frac{1 - y_i}{1 - \pi_i}
+    $$
+
+-   This derivative of the logistic function follows when we notice that the direct derivative of $\pi_i$ is equivalent to the result of multiplying it by $(1-\pi_i)$:
+
+    $$
+    \pi_i = \frac{1}{1 + \exp(-\eta_i)} \quad \Rightarrow \quad \frac{d\pi_i}{d\eta_i} = \pi_i (1 - \pi_i)
+    $$
+
+-   The derivative of the linear predictor is fairly trivial:
+
+    $$
+    \frac{d\eta_i}{d\beta_1} = x_i
+    $$
+
+### Multiplying the three derivatives
+
+Start by substituting:
+
+$$
+\frac{d\ell_i}{d\beta_1}
+= \left( \frac{y_i}{\pi_i} - \frac{1 - y_i}{1 - \pi_i} \right) \cdot \pi_i (1 - \pi_i) \cdot x_i
+$$
+
+Expand and simplify:
+
+$$
+\left( \frac{y_i}{\pi_i} - \frac{1 - y_i}{1 - \pi_i} \right) \cdot \pi_i (1 - \pi_i)
+= y_i (1 - \pi_i) - (1 - y_i) \pi_i = y_i - \pi_i
+$$
+
+Hence:
+
+$$
+\frac{d\ell_i}{d\beta_1} = (y_i - \pi_i) x_i
+$$
+
+### The Score Function
+
+Summing over all observations gives the score function, often notated $U$:
+
+$$
+U(\beta_1) = \frac{\partial \ell}{\partial \beta_1} = \sum_{i=1}^n (y_i - \pi_i) x_i
+$$
+
+A similar expression holds for the intercept $\beta_0$, where $x_i = 1$:
+
+$$
+U(\beta_0) = \sum_{i=1}^n (y_i - \pi_i)
 $$
 
 ------------------------------------------------------------------------
 
-### 4. Gradient and Hessian
+## The General Case
 
-Gradient (score function):
+-   $\eta_i = \mathbf{x}_i^\top \boldsymbol{\beta}$
+-   $\pi_i = \frac{1}{1 + \exp(-\eta_i)}$
+
+The score function in vector form for arbitrary $\beta_k$ coefficients is:
 
 $$
-\nabla \ell(\beta) = X^T(y - p)
+\mathbf{U}(\boldsymbol{\beta}) = \nabla_{\boldsymbol{\beta}} \ell(\boldsymbol{\beta}) = \sum_{i=1}^n (y_i - \pi_i) \mathbf{x}_i
 $$
+
+Or in matrix form:
+
+$$
+\mathbf{U}(\boldsymbol{\beta}) = \mathbf{X}^\top (\mathbf{y} - \boldsymbol{\pi})
+$$
+
+where $\mathbf{X} \in \mathbb{R}^{n \times p}$, and $\boldsymbol{\pi} \in \mathbb{R}^n$ is the vector of fitted probabilities.
+
+We can now represent the score function in code for our simulated dataset:
+
+```{r}
+compute_score <- function(beta0, beta1, data) {
+  x <- data$x
+  y <- data$y
+  
+  eta <- beta0 + beta1 * x
+  pi <- 1 / (1 + exp(-eta))  # predicted probabilities
+  
+  residual <- y - pi  # (y_i - pi_i)
+  
+  score_0 <- sum(residual)
+  score_1 <- sum(residual * x)
+  
+  c(score_0, score_1)
+}
+
+# Example: compute the score at the true parameters
+compute_score(beta0 = -0.5, beta1 = 2, data = sim_data)
+```
+
+
+```{r}
+```
+
 
 Hessian:
 
