@@ -1,6 +1,6 @@
 ---
 title: "Explorations in Binary Data"
-date: "06-13-2025"
+date: "06-16-2025"
 author: "Ashley Dickson"
 ---
 
@@ -10,9 +10,5 @@ Here I focus on measures of estimate uncertainty in Logistic Regression. Previou
 </p>
 
 <p>
-Please navigate to <a href="https://ashleymdickson.github.io/HeartFailure/uncertainty.html">Uncertainty</a>.
-</p>
-
-<p>
-This is a Quarto website. To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+Please navigate to <a href="https://ashleymdickson.github.io/HeartFailure/uncertainty.html">Some Topics in LR</a>.
 </p>

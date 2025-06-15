@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Some Topics in Logistic Regression – Modelling Binary Outcomes</title>
+<title>Some topics in LR – Modelling Binary Outcomes</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -153,11 +153,11 @@ window.Quarto = {
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
     <a class="nav-link" href="./index.html"> 
-<span class="menu-text">Model</span></a>
+<span class="menu-text">Welcome</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="./uncertainty.html" aria-current="page"> 
-<span class="menu-text">Some Topics in Logistic Regression</span></a>
+<span class="menu-text">Some topics in LR</span></a>
   </li>  
 </ul>
           </div> <!-- /navcollapse -->
@@ -175,30 +175,37 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#logistic-regression-done-manually" id="toc-logistic-regression-done-manually" class="nav-link active" data-scroll-target="#logistic-regression-done-manually">Logistic Regression, done manually</a>
-  <ul class="collapse">
-  <li><a href="#introduction" id="toc-introduction" class="nav-link" data-scroll-target="#introduction">1. Introduction</a></li>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">1. Introduction</a></li>
   <li><a href="#simulated-data" id="toc-simulated-data" class="nav-link" data-scroll-target="#simulated-data">2. Simulated Data</a></li>
   <li><a href="#logistic-model-and-estimation" id="toc-logistic-model-and-estimation" class="nav-link" data-scroll-target="#logistic-model-and-estimation">3. Logistic Model and Estimation</a></li>
-  <li><a href="#gradient-and-hessian" id="toc-gradient-and-hessian" class="nav-link" data-scroll-target="#gradient-and-hessian">4. Gradient and Hessian</a>
+  <li><a href="#gradient" id="toc-gradient" class="nav-link" data-scroll-target="#gradient">4. Gradient</a>
   <ul class="collapse">
   <li><a href="#differentiate-it" id="toc-differentiate-it" class="nav-link" data-scroll-target="#differentiate-it">Differentiate it</a></li>
   <li><a href="#multiplying-the-three-derivatives" id="toc-multiplying-the-three-derivatives" class="nav-link" data-scroll-target="#multiplying-the-three-derivatives">Multiplying the three derivatives</a></li>
   <li><a href="#the-score-function" id="toc-the-score-function" class="nav-link" data-scroll-target="#the-score-function">The Score Function</a></li>
+  <li><a href="#and-in-general" id="toc-and-in-general" class="nav-link" data-scroll-target="#and-in-general">And in general…</a></li>
   </ul></li>
-  <li><a href="#the-general-case" id="toc-the-general-case" class="nav-link" data-scroll-target="#the-general-case">The General Case</a>
+  <li><a href="#the-hessian" id="toc-the-hessian" class="nav-link" data-scroll-target="#the-hessian">5. The Hessian</a>
   <ul class="collapse">
-  <li><a href="#r-code-for-gradient-and-hessian" id="toc-r-code-for-gradient-and-hessian" class="nav-link" data-scroll-target="#r-code-for-gradient-and-hessian">R code for Gradient and Hessian:</a></li>
-  <li><a href="#newton-raphson-algorithm" id="toc-newton-raphson-algorithm" class="nav-link" data-scroll-target="#newton-raphson-algorithm">5. Newton-Raphson Algorithm</a></li>
-  <li><a href="#r-implementation" id="toc-r-implementation" class="nav-link" data-scroll-target="#r-implementation">R implementation:</a></li>
-  <li><a href="#variance-of-estimates" id="toc-variance-of-estimates" class="nav-link" data-scroll-target="#variance-of-estimates">6. Variance of Estimates</a></li>
-  <li><a href="#bootstrap-validation" id="toc-bootstrap-validation" class="nav-link" data-scroll-target="#bootstrap-validation">7. Bootstrap Validation</a></li>
-  <li><a href="#bootstrap-r-code" id="toc-bootstrap-r-code" class="nav-link" data-scroll-target="#bootstrap-r-code">Bootstrap R code:</a></li>
-  <li><a href="#cross-validation" id="toc-cross-validation" class="nav-link" data-scroll-target="#cross-validation">8. Cross-validation</a></li>
-  <li><a href="#example-5-fold-cv-in-r" id="toc-example-5-fold-cv-in-r" class="nav-link" data-scroll-target="#example-5-fold-cv-in-r">Example 5-fold CV in R:</a></li>
-  <li><a href="#comparison-of-bootstrap-and-cross-validation" id="toc-comparison-of-bootstrap-and-cross-validation" class="nav-link" data-scroll-target="#comparison-of-bootstrap-and-cross-validation">9. Comparison of Bootstrap and Cross-validation</a></li>
-  <li><a href="#extensions-and-practical-considerations" id="toc-extensions-and-practical-considerations" class="nav-link" data-scroll-target="#extensions-and-practical-considerations">10. Extensions and Practical Considerations</a></li>
+  <li><a href="#deriving-the-hessian" id="toc-deriving-the-hessian" class="nav-link" data-scroll-target="#deriving-the-hessian">Deriving the Hessian</a></li>
+  <li><a href="#hessian-in-matrix-form" id="toc-hessian-in-matrix-form" class="nav-link" data-scroll-target="#hessian-in-matrix-form">Hessian in Matrix Form</a></li>
+  <li><a href="#and-in-general-1" id="toc-and-in-general-1" class="nav-link" data-scroll-target="#and-in-general-1">And in general…</a></li>
   </ul></li>
+  <li><a href="#newton-raphson-algorithm" id="toc-newton-raphson-algorithm" class="nav-link" data-scroll-target="#newton-raphson-algorithm">6. Newton-Raphson Algorithm</a>
+  <ul class="collapse">
+  <li><a href="#r-implementation" id="toc-r-implementation" class="nav-link" data-scroll-target="#r-implementation">R implementation:</a></li>
+  </ul></li>
+  <li><a href="#variance-of-estimates" id="toc-variance-of-estimates" class="nav-link" data-scroll-target="#variance-of-estimates">7. Variance of Estimates</a>
+  <ul class="collapse">
+  <li><a href="#taylor-expansion" id="toc-taylor-expansion" class="nav-link" data-scroll-target="#taylor-expansion">Taylor Expansion</a></li>
+  <li><a href="#application" id="toc-application" class="nav-link" data-scroll-target="#application">Application</a></li>
+  <li><a href="#two-parameters" id="toc-two-parameters" class="nav-link" data-scroll-target="#two-parameters">Two Parameters</a></li>
+  </ul></li>
+  <li><a href="#estimate-variances-by-bootstrapping" id="toc-estimate-variances-by-bootstrapping" class="nav-link" data-scroll-target="#estimate-variances-by-bootstrapping">8. Estimate Variances by Bootstrapping</a></li>
+  <li><a href="#bootstrap-validation" id="toc-bootstrap-validation" class="nav-link" data-scroll-target="#bootstrap-validation">9. Bootstrap Validation</a></li>
+  <li><a href="#cross-validation" id="toc-cross-validation" class="nav-link" data-scroll-target="#cross-validation">10. Cross-validation</a>
+  <ul class="collapse">
+  <li><a href="#fold-cv-in-r" id="toc-fold-cv-in-r" class="nav-link" data-scroll-target="#fold-cv-in-r">5-fold CV in R:</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -208,7 +215,7 @@ window.Quarto = {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Some Topics in Logistic Regression</h1>
+<h1 class="title">Some topics in LR</h1>
 <p class="subtitle lead">Estimation, Uncertainty, and Validation</p>
 </div>
 
@@ -226,9 +233,6 @@ window.Quarto = {
 </header>
 
 
-<hr>
-<section id="logistic-regression-done-manually" class="level1">
-<h1>Logistic Regression, done manually</h1>
 <section id="introduction" class="level2">
 <h2 class="anchored" data-anchor-id="introduction">1. Introduction</h2>
 <p>Here I explore some topics in logistic regression manually, including techniques in estimation, uncertainty and validation. I’ll generate a simulated dataset by way of illustration.</p>
@@ -266,7 +270,6 @@ P(Y = 1 \mid X) = \frac{1}{1 + e^{-(\beta_0 + \beta_1 X)}}
 </div>
 </div>
 </div>
-<hr>
 </section>
 <section id="logistic-model-and-estimation" class="level2">
 <h2 class="anchored" data-anchor-id="logistic-model-and-estimation">3. Logistic Model and Estimation</h2>
@@ -326,10 +329,9 @@ L(\beta_j) = \prod_{i=1}^{n} \pi_i^{y_i} (1 - \pi_i)^{1 - y_i}
 = \sum_{i=1}^{n} (y_i - \pi_i) x_{ij} = 0.
 \]</span></p>
 <p>However, this has no closed-form solution, so numerical methods are used to estimate <span class="math inline">\(beta\_j\)</span>, e.g.&nbsp;Newton-Raphson. For this, we first need to derive the Score Function and the Hessian.</p>
-<hr>
 </section>
-<section id="gradient-and-hessian" class="level2">
-<h2 class="anchored" data-anchor-id="gradient-and-hessian">4. Gradient and Hessian</h2>
+<section id="gradient" class="level2">
+<h2 class="anchored" data-anchor-id="gradient">4. Gradient</h2>
 <p>To find the maxima, we firstly need to know how the log likelihood function varies w.r.t its <span class="math inline">\(\beta\)</span> parameters This is just its first derivative, called the Score Function:</p>
 <p>The likelihood function for the whole sample is:</p>
 <p><span class="math display">\[
@@ -389,28 +391,21 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \pi_i^{y_i} (1 - \pi_i)^{1 - y_i}
 <p><span class="math display">\[
 U(\beta_1) = \frac{\partial \ell}{\partial \beta_1} = \sum_{i=1}^n (y_i - \pi_i) x_i
 \]</span></p>
-<p>A similar expression holds for the intercept <span class="math inline">\(\beta_0\)</span>, where <span class="math inline">\(x_i = 1\)</span>:</p>
+<p>A similar expression holds for the intercept:</p>
 <p><span class="math display">\[
 U(\beta_0) = \sum_{i=1}^n (y_i - \pi_i)
 \]</span></p>
-<hr>
 </section>
-</section>
-<section id="the-general-case" class="level2">
-<h2 class="anchored" data-anchor-id="the-general-case">The General Case</h2>
-<ul>
-<li><span class="math inline">\(\eta_i = \mathbf{x}_i^\top \boldsymbol{\beta}\)</span></li>
-<li><span class="math inline">\(\pi_i = \frac{1}{1 + \exp(-\eta_i)}\)</span></li>
-</ul>
-<p>The score function in vector form for arbitrary <span class="math inline">\(\beta_k\)</span> coefficients is:</p>
+<section id="and-in-general" class="level3">
+<h3 class="anchored" data-anchor-id="and-in-general">And in general…</h3>
+<p>The score function in vector form for arbitrary <span class="math inline">\(\beta_k\)</span> coefficients is sometimes called the Jacobian and can be expressed:</p>
 <p><span class="math display">\[
 \mathbf{U}(\boldsymbol{\beta}) = \nabla_{\boldsymbol{\beta}} \ell(\boldsymbol{\beta}) = \sum_{i=1}^n (y_i - \pi_i) \mathbf{x}_i
 \]</span></p>
 <p>Or in matrix form:</p>
 <p><span class="math display">\[
-\mathbf{U}(\boldsymbol{\beta}) = \mathbf{X}^\top (\mathbf{y} - \boldsymbol{\pi})
+\mathbf{U}(\boldsymbol{\beta}) = \mathbf{X}^\top (\mathbf{y} - \boldsymbol{\pi}).
 \]</span></p>
-<p>where <span class="math inline">\(\mathbf{X} \in \mathbb{R}^{n \times p}\)</span>, and <span class="math inline">\(\boldsymbol{\pi} \in \mathbb{R}^n\)</span> is the vector of fitted probabilities.</p>
 <p>We can now represent the score function in code for our simulated dataset:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>compute_score <span class="ot">&lt;-</span> <span class="cf">function</span>(beta0, beta1, data) {</span>
@@ -418,123 +413,406 @@ U(\beta_0) = \sum_{i=1}^n (y_i - \pi_i)
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> data<span class="sc">$</span>y</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  </span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> beta0 <span class="sc">+</span> beta1 <span class="sc">*</span> x</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  pi <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta))  <span class="co"># predicted probabilities</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  residual <span class="ot">&lt;-</span> y <span class="sc">-</span> pi  <span class="co"># (y_i - pi_i)</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  score_0 <span class="ot">&lt;-</span> <span class="fu">sum</span>(residual)</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  score_1 <span class="ot">&lt;-</span> <span class="fu">sum</span>(residual <span class="sc">*</span> x)</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(score_0, score_1)</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Example: compute the score at the true parameters</span></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="fu">compute_score</span>(<span class="at">beta0 =</span> <span class="sc">-</span><span class="fl">0.5</span>, <span class="at">beta1 =</span> <span class="dv">2</span>, <span class="at">data =</span> sim_data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  pi <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta))</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  residual <span class="ot">&lt;-</span> y <span class="sc">-</span> pi</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  score_0 <span class="ot">&lt;-</span> <span class="fu">sum</span>(residual)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  score_1 <span class="ot">&lt;-</span> <span class="fu">sum</span>(residual <span class="sc">*</span> x)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(score_0, score_1)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="fu">compute_score</span>(<span class="at">beta0 =</span> <span class="sc">-</span><span class="fl">0.5</span>, <span class="at">beta1 =</span> <span class="dv">2</span>, <span class="at">data =</span> sim_data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] -1.494431  3.035431</code></pre>
 </div>
 </div>
-<p>Hessian:</p>
-<p><span class="math display">\[
-H(\beta) = -X^T W X
-\]</span></p>
-<p>where <span class="math inline">\(W\)</span> is diagonal with elements <span class="math inline">\(p_i(1 - p_i)\)</span>.</p>
-<section id="r-code-for-gradient-and-hessian" class="level3">
-<h3 class="anchored" data-anchor-id="r-code-for-gradient-and-hessian">R code for Gradient and Hessian:</h3>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="dv">1</span>, x)</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>beta <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>)</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>eta <span class="ot">&lt;-</span> X <span class="sc">%*%</span> beta</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta))</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>gradient <span class="ot">&lt;-</span> <span class="fu">t</span>(X) <span class="sc">%*%</span> (y <span class="sc">-</span> p)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>W <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">as.vector</span>(p <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> p)))</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>hessian <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fu">t</span>(X) <span class="sc">%*%</span> W <span class="sc">%*%</span> X</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<hr>
 </section>
-<section id="newton-raphson-algorithm" class="level3">
-<h3 class="anchored" data-anchor-id="newton-raphson-algorithm">5. Newton-Raphson Algorithm</h3>
-<p>Iteration step:</p>
+</section>
+<section id="the-hessian" class="level2">
+<h2 class="anchored" data-anchor-id="the-hessian">5. The Hessian</h2>
+<p>To understand the curvature of the log-likelihood function near its stationary points, we need need the second derivatives.</p>
+<section id="deriving-the-hessian" class="level3">
+<h3 class="anchored" data-anchor-id="deriving-the-hessian">Deriving the Hessian</h3>
+<p>Begin with the score function:</p>
 <p><span class="math display">\[
-\beta_{\text{new}} = \beta_{\text{old}} - [H(\beta_{\text{old}})]^{-1} \nabla \ell(\beta_{\text{old}})
+\frac{\partial \ell}{\partial \beta_j} = \sum_{i=1}^n (y_i - \pi_i) x_{ij}
+\]</span></p>
+<p>Our goal is to differentiate this expression with respect to another parameter (<span class="math inline">\(\beta_k\)</span>) to obtain the Hessian:</p>
+<p><span class="math display">\[
+\frac{\partial^2 \ell}{\partial \beta_j \partial \beta_k}
+\]</span></p>
+<p>We are interested in the derivative, which can be expressed as</p>
+<p><span class="math display">\[
+\frac{d}{d\beta_k} \left[ \sum_{i=1}^n (y_i - \pi_i) x_{ij} \right]
+= \sum_{i=1}^n \left( \frac{d}{d\beta_k} (-\pi_i) \cdot x_{ij} \right)
+\]</span></p>
+<p>since <span class="math inline">\(y_i\)</span> is observed data not dependent on <span class="math inline">\(\beta_k\)</span>, its derivative is zero.</p>
+<p>Derivative of <span class="math inline">\(\pi_i\)</span>:</p>
+<p>Compute the derivative using the chain rule:</p>
+<ol type="1">
+<li>First, we have the derivative of the logistic function:</li>
+</ol>
+<p><span class="math display">\[
+\frac{d\pi_i}{d\eta_i} = \pi_i (1 - \pi_i)
+\]</span></p>
+<ol start="2" type="1">
+<li>Derivative of <span class="math inline">\(\eta_i\)</span> with respect to <span class="math inline">\(\beta_k\)</span></li>
+</ol>
+<p>Since:</p>
+<p><span class="math display">\[
+\eta_i = \sum_{l=0}^p \beta_l x_{il} = \beta_0 + \beta_1 x_{i1} + ... + \beta_k x_{ik} + ... + \beta_p x_{ip}
+\]</span></p>
+<p>any term not involving <span class="math inline">\(\beta_k\)</span> differentiates to <span class="math inline">\(0\)</span> and the power of <span class="math inline">\(\beta_k\)</span> goes to <span class="math inline">\(0\)</span> also, leaving:</p>
+<p><span class="math display">\[
+\frac{d\eta_i}{d\beta_k} = x_{ik}
+\]</span></p>
+<p>Chaining them together:</p>
+<p><span class="math display">\[
+\frac{d\pi_i}{d\beta_k} = \pi_i (1 - \pi_i) x_{ik}
+\]</span></p>
+<p>Substitute back into the Hessian:</p>
+<p>We can now substitute these results back into the second derivative of the log-likelihood:</p>
+<p><span class="math display">\[
+\frac{\partial^2 \ell}{\partial \beta_j \partial \beta_k}
+= - \sum_{i=1}^n \pi_i (1 - \pi_i) x_{ij} x_{ik}
+\]</span></p>
+<p>This gives an entry of the Hessian matrix.</p>
+</section>
+<section id="hessian-in-matrix-form" class="level3">
+<h3 class="anchored" data-anchor-id="hessian-in-matrix-form">Hessian in Matrix Form</h3>
+<p>If we have two parrameters, <span class="math inline">\(\beta_0\)</span> and <span class="math inline">\(\beta_1\)</span>, and <span class="math inline">\(x_{i0} = 1\)</span>, <span class="math inline">\(x_{i1} = x_i\)</span>, then the Hessian is:</p>
+<p><span class="math display">\[
+\mathbf{H} =
+- \sum_{i=1}^n \pi_i (1 - \pi_i)
+\begin{bmatrix}
+1 &amp; x_i \\
+x_i &amp; x_i^2
+\end{bmatrix}
 \]</span></p>
 </section>
+<section id="and-in-general-1" class="level3">
+<h3 class="anchored" data-anchor-id="and-in-general-1">And in general…</h3>
+<p>In arbitrary parameters, Hessian matrix is expressed in matrix form</p>
+<p><span class="math display">\[
+\mathbf{H}(\boldsymbol{\beta}) = \frac{\partial^2 \ell}{\partial \boldsymbol{\beta} \partial \boldsymbol{\beta}^\top}
+= - \mathbf{X}^\top \mathbf{W} \mathbf{X}
+\]</span> where <span class="math inline">\(W\)</span> is diagonal with elements <span class="math inline">\(p_i(1 - p_i)\)</span>.</p>
+<p>We can now represent the Hessian in code:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>compute_hessian <span class="ot">&lt;-</span> <span class="cf">function</span>(beta0, beta1, data) {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> data<span class="sc">$</span>x</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> data<span class="sc">$</span>y</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fu">length</span>(x)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> beta0 <span class="sc">+</span> beta1 <span class="sc">*</span> x</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  pi <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta))</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  w <span class="ot">&lt;-</span> pi <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> pi)  <span class="co"># weights</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  H <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="at">nrow =</span> <span class="dv">2</span>, <span class="at">ncol =</span> <span class="dv">2</span>)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    xi_vec <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, x[i])</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    outer_prod <span class="ot">&lt;-</span> <span class="fu">tcrossprod</span>(xi_vec)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    H <span class="ot">&lt;-</span> H <span class="sc">+</span> w[i] <span class="sc">*</span> outer_prod</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="sc">-</span>H)</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="fu">compute_hessian</span>(<span class="at">beta0 =</span> <span class="sc">-</span><span class="fl">0.5</span>, <span class="at">beta1 =</span> <span class="dv">2</span>, sim_data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           [,1]      [,2]
+[1,] -15.206826 -2.170985
+[2,]  -2.170985 -6.016772</code></pre>
+</div>
+</div>
+<p>The determinant <span class="math inline">\(\det(H)\)</span> here is positive, meaning that we have a maximum or a minimum. The negative sign on entry <span class="math inline">\((1,1)\)</span> indicates a maximum.</p>
+</section>
+</section>
+<section id="newton-raphson-algorithm" class="level2">
+<h2 class="anchored" data-anchor-id="newton-raphson-algorithm">6. Newton-Raphson Algorithm</h2>
+<p>We are interested in solving for the values of <span class="math inline">\(\boldsymbol{\beta}\)</span> that maximise the (log-)likelihood function. Numerically, we shall invoke an iterative procedure with iteration step</p>
+<p><span class="math display">\[
+\boldsymbol{\beta_{t+1}} = \boldsymbol{\beta_t} - \boldsymbol{H^{-1}} \boldsymbol{U}
+\]</span> where U is the sciore vector (Jacobian) and H is the Hessian.</p>
 <section id="r-implementation" class="level3">
 <h3 class="anchored" data-anchor-id="r-implementation">R implementation:</h3>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>beta <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>)</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>) {</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> X <span class="sc">%*%</span> beta</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  p <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta))</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  gradient <span class="ot">&lt;-</span> <span class="fu">t</span>(X) <span class="sc">%*%</span> (y <span class="sc">-</span> p)</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  W <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">as.vector</span>(p <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> p)))</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  hessian <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fu">t</span>(X) <span class="sc">%*%</span> W <span class="sc">%*%</span> X</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  beta <span class="ot">&lt;-</span> beta <span class="sc">-</span> <span class="fu">solve</span>(hessian) <span class="sc">%*%</span> gradient</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(beta)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<hr>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>NR <span class="ot">&lt;-</span> <span class="cf">function</span>(data, <span class="at">beta_init =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="at">iterations =</span> <span class="dv">7</span>) {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  beta <span class="ot">&lt;-</span> beta_init</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(data)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> data<span class="sc">$</span>x</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> data<span class="sc">$</span>y</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (iter <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>iterations) {</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    eta <span class="ot">&lt;-</span> beta[<span class="dv">1</span>] <span class="sc">+</span> beta[<span class="dv">2</span>] <span class="sc">*</span> x</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    pi <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta))</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    residual <span class="ot">&lt;-</span> y <span class="sc">-</span> pi</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    score <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">sum</span>(residual), <span class="fu">sum</span>(residual <span class="sc">*</span> x))  <span class="co"># U_0, U_1</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    H <span class="ot">&lt;-</span> <span class="fu">compute_hessian</span>(beta[<span class="dv">1</span>], beta[<span class="dv">2</span>], data)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    delta <span class="ot">&lt;-</span> <span class="fu">solve</span>(H, score)  <span class="co"># H^{-1} * U</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    beta_new <span class="ot">&lt;-</span> beta <span class="sc">-</span> delta</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    beta <span class="ot">&lt;-</span> beta_new</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">#print(beta)</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">beta=</span>beta, <span class="at">H=</span>H))</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">NR</span>(sim_data)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>beta_hat <span class="ot">&lt;-</span> out<span class="sc">$</span>beta</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>H <span class="ot">&lt;-</span> out<span class="sc">$</span>H</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(beta_hat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] -0.7391687  2.7788990</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(H)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           [,1]      [,2]
+[1,] -12.302859 -2.325084
+[2,]  -2.325084 -3.502605</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compare to GLM</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>mod <span class="ot">&lt;-</span> <span class="fu">glm</span>(y <span class="sc">~</span> x, <span class="at">family =</span> binomial, <span class="at">data =</span> sim_data)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>mod<span class="sc">$</span>coefficients</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>(Intercept)           x 
+ -0.7391687   2.7788990 </code></pre>
+</div>
+</div>
 </section>
-<section id="variance-of-estimates" class="level3">
-<h3 class="anchored" data-anchor-id="variance-of-estimates">6. Variance of Estimates</h3>
-<p>Estimated covariance matrix:</p>
+</section>
+<section id="variance-of-estimates" class="level2">
+<h2 class="anchored" data-anchor-id="variance-of-estimates">7. Variance of Estimates</h2>
+<p>Let’s now derive the variance of the maximum likelihood estimate (MLE) <span class="math inline">\(\hat{\boldsymbol{\beta}}\)</span> in logistic regression.</p>
+<section id="taylor-expansion" class="level3">
+<h3 class="anchored" data-anchor-id="taylor-expansion">Taylor Expansion</h3>
+<p>At the MLE, the score function (gradient of the log-likelihood) is zero:</p>
 <p><span class="math display">\[
-\text{Var}(\hat{\beta}) = (X^T W X)^{-1}
+\mathbf{U}(\hat{\boldsymbol{\beta}}) = \frac{\partial \ell}{\partial \boldsymbol{\beta}} \bigg|_{\hat{\boldsymbol{\beta}}} = 0
 \]</span></p>
-<hr>
+<p>We can expand the score function using a first-order Taylor approximation around the true value <span class="math inline">\(\boldsymbol{\beta}\)</span>:</p>
+<p><span class="math display">\[
+\mathbf{U}(\hat{\boldsymbol{\beta}}) \approx \mathbf{U}(\boldsymbol{\beta}) + \mathbf{H}(\boldsymbol{\beta}) (\hat{\boldsymbol{\beta}} - \boldsymbol{\beta})
+\]</span></p>
+<p>Setting the left-hand side to 0</p>
+<p><span class="math display">\[
+0 \approx \mathbf{U}(\boldsymbol{\beta}) + \mathbf{H}(\boldsymbol{\beta}) (\hat{\boldsymbol{\beta}} - \boldsymbol{\beta})
+\]</span></p>
+<p>and rearranging to</p>
+<p><span class="math display">\[
+\hat{\boldsymbol{\beta}} - \boldsymbol{\beta} \approx - \mathbf{H}^{-1}(\boldsymbol{\beta}) \, \mathbf{U}(\boldsymbol{\beta})
+\]</span></p>
+<p>lets us take the variance of both sides:</p>
+<p><span class="math display">\[
+\operatorname{Var}(\hat{\boldsymbol{\beta}}) \approx \mathbf{H}^{-1} \operatorname{Var}(\mathbf{U}(\boldsymbol{\beta})) \left(\mathbf{H}^{-1}\right)^\top
+\]</span></p>
+<p>By the information equality, the variance of the score function equals the Fisher Information:</p>
+<p><span class="math display">\[
+\operatorname{Var}(\mathbf{U}(\boldsymbol{\beta})) = \mathcal{I}(\boldsymbol{\beta}) = - \mathbb{E}[\mathbf{H}(\boldsymbol{\beta})]
+\]</span></p>
+<p>So:</p>
+<p><span class="math display">\[
+\operatorname{Var}(\hat{\boldsymbol{\beta}}) \approx \mathbf{H}^{-1} \mathcal{I} \left( \mathbf{H}^{-1} \right)^\top = \mathcal{I}^{-1}
+\]</span></p>
 </section>
-<section id="bootstrap-validation" class="level3">
-<h3 class="anchored" data-anchor-id="bootstrap-validation">7. Bootstrap Validation</h3>
+<section id="application" class="level3">
+<h3 class="anchored" data-anchor-id="application">Application</h3>
+<p>In logistic regression, the Fisher Information (or negative Hessian) at <span class="math inline">\(\hat{\boldsymbol{\beta}}\)</span> is:</p>
+<p><span class="math display">\[
+\mathcal{I}(\hat{\boldsymbol{\beta}}) = \mathbf{X}^\top \mathbf{W} \mathbf{X}
+\]</span></p>
+<p>Where <span class="math inline">\(\mathbf{W}\)</span> is a diagonal matrix with entries <span class="math inline">\(\pi_i (1 - \pi_i)\)</span>.</p>
+<p>So, the variance–covariance matrix of <span class="math inline">\(\hat{\boldsymbol{\beta}}\)</span> is:</p>
+<p><span class="math display">\[
+\operatorname{Var}(\hat{\boldsymbol{\beta}}) = \left( \mathbf{X}^\top \mathbf{W} \mathbf{X} \right)^{-1}
+\]</span></p>
+<p>This is the matrix used to compute the standard errors and hence the Wald confidence intervals.</p>
+</section>
+<section id="two-parameters" class="level3">
+<h3 class="anchored" data-anchor-id="two-parameters">Two Parameters</h3>
+<p>When we have only two parameters, <span class="math inline">\(\beta_0\)</span> and <span class="math inline">\(\beta_1\)</span>, the Fisher Information is:</p>
+<p><span class="math display">\[
+\mathcal{I} = \sum_{i=1}^n \pi_i (1 - \pi_i)
+\begin{bmatrix}
+1 &amp; x_i \\
+x_i &amp; x_i^2
+\end{bmatrix}
+\]</span></p>
+<p>Then:</p>
+<p><span class="math display">\[
+\operatorname{Var}(\hat{\boldsymbol{\beta}}) = \left[ \sum_{i=1}^n \pi_i (1 - \pi_i)
+\begin{bmatrix}
+1 &amp; x_i \\
+x_i &amp; x_i^2
+\end{bmatrix} \right]^{-1}
+\]</span></p>
+<p>The diagonal elements give <span class="math inline">\(\operatorname{Var}(\hat{\beta}_0)\)</span> and <span class="math inline">\(\operatorname{Var}(\hat{\beta}_1)\)</span>, respectively. Taking square roots gives their standard errors.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>vcov_mat <span class="ot">&lt;-</span> <span class="fu">solve</span>(<span class="sc">-</span>H)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>se <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">diag</span>(vcov_mat))</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>z <span class="ot">&lt;-</span> <span class="fu">qnorm</span>(<span class="fl">0.975</span>)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>ci <span class="ot">&lt;-</span> <span class="fu">cbind</span>(</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">Estimate =</span> beta_hat,</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">SE =</span> se,</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">Lower =</span> beta_hat <span class="sc">-</span> z <span class="sc">*</span> se,</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">Upper =</span> beta_hat <span class="sc">+</span> z <span class="sc">*</span> se</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">round</span>(vcov_mat, <span class="dv">4</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        [,1]    [,2]
+[1,]  0.0929 -0.0617
+[2,] -0.0617  0.3265</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(ci) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"beta_0"</span>, <span class="st">"beta_1"</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">round</span>(ci, <span class="dv">4</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>       Estimate     SE   Lower   Upper
+beta_0  -0.7392 0.3049 -1.3367 -0.1416
+beta_1   2.7789 0.5714  1.6590  3.8988</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="estimate-variances-by-bootstrapping" class="level2">
+<h2 class="anchored" data-anchor-id="estimate-variances-by-bootstrapping">8. Estimate Variances by Bootstrapping</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>bootstrap <span class="ot">&lt;-</span> <span class="cf">function</span>(data, B) {</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(data)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  beta_boot <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow =</span> B, <span class="at">ncol =</span> <span class="dv">2</span>)  <span class="co"># Store (beta_0, beta_1)</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (b <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>B) {</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span>n, <span class="at">size =</span> n, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    boot_data <span class="ot">&lt;-</span> data[idx, ]</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    out <span class="ot">&lt;-</span> <span class="fu">NR</span>(boot_data)</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    beta_boot[b, ] <span class="ot">&lt;-</span> out<span class="sc">$</span>beta</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(beta_boot) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"beta_0"</span>, <span class="st">"beta_1"</span>)</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(beta_boot)</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>boot_estimates <span class="ot">&lt;-</span> <span class="fu">bootstrap</span>(sim_data, <span class="dv">1000</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>beta_boot <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(boot_estimates)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>boot_var <span class="ot">&lt;-</span> <span class="fu">apply</span>(boot_estimates, <span class="dv">2</span>, var)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>boot_se <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(boot_var)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>boot_ci <span class="ot">&lt;-</span> <span class="fu">apply</span>(boot_estimates, <span class="dv">2</span>, quantile, <span class="at">probs =</span> <span class="fu">c</span>(<span class="fl">0.025</span>, <span class="fl">0.975</span>))</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">cbind</span>(<span class="at">Estimate =</span> beta_boot, <span class="at">Variance =</span> boot_var, <span class="at">SE =</span> boot_se, <span class="fu">t</span>(boot_ci)), <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>       Estimate Variance     SE   2.5%   97.5%
+beta_0  -0.7889   0.1149 0.3390 -1.545 -0.1848
+beta_1   3.0256   0.6575 0.8109  1.862  4.9777</code></pre>
+</div>
+</div>
+<p>The results are technically consistent with the above, but the CIs only just include the true values. Unclear whether this is due to a programming error, unsufficient sample size, or something else.</p>
+</section>
+<section id="bootstrap-validation" class="level2">
+<h2 class="anchored" data-anchor-id="bootstrap-validation">9. Bootstrap Validation</h2>
 <p>Repeated sampling with replacement to estimate standard errors.</p>
+<p>Bootstrap in R:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pROC)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>bootstrap_validate_auc <span class="ot">&lt;-</span> <span class="cf">function</span>(data, <span class="at">B =</span> <span class="dv">200</span>) {</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(data)</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> data<span class="sc">$</span>x</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> data<span class="sc">$</span>y</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  optimism <span class="ot">&lt;-</span> <span class="fu">numeric</span>(B)</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (b <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>B) {</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span>n, <span class="at">size =</span> n, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>    data_boot <span class="ot">&lt;-</span> data[idx, ]</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>    fit_boot <span class="ot">&lt;-</span> <span class="fu">NR</span>(data_boot)</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>    beta_boot <span class="ot">&lt;-</span> fit_boot<span class="sc">$</span>beta</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>    x_boot <span class="ot">&lt;-</span> data_boot<span class="sc">$</span>x</span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>    y_boot <span class="ot">&lt;-</span> data_boot<span class="sc">$</span>y</span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>    eta_boot <span class="ot">&lt;-</span> beta_boot[<span class="dv">1</span>] <span class="sc">+</span> beta_boot[<span class="dv">2</span>] <span class="sc">*</span> x_boot</span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>    p_boot <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta_boot))</span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>    auc_boot <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(<span class="fu">auc</span>(y_boot, p_boot))</span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a>    <span class="co"># AUC on original data</span></span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>    eta_test <span class="ot">&lt;-</span> beta_boot[<span class="dv">1</span>] <span class="sc">+</span> beta_boot[<span class="dv">2</span>] <span class="sc">*</span> x</span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>    p_test <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta_test))</span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a>    auc_test <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(<span class="fu">auc</span>(y, p_test))</span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a>    optimism[b] <span class="ot">&lt;-</span> auc_boot <span class="sc">-</span> auc_test</span>
+<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb20-28"><a href="#cb20-28" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-29"><a href="#cb20-29" aria-hidden="true" tabindex="-1"></a>  avg_optimism <span class="ot">&lt;-</span> <span class="fu">mean</span>(optimism)</span>
+<span id="cb20-30"><a href="#cb20-30" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-31"><a href="#cb20-31" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Fit model on full data</span></span>
+<span id="cb20-32"><a href="#cb20-32" aria-hidden="true" tabindex="-1"></a>  final_fit <span class="ot">&lt;-</span> <span class="fu">NR</span>(data)</span>
+<span id="cb20-33"><a href="#cb20-33" aria-hidden="true" tabindex="-1"></a>  beta_final <span class="ot">&lt;-</span> final_fit<span class="sc">$</span>beta</span>
+<span id="cb20-34"><a href="#cb20-34" aria-hidden="true" tabindex="-1"></a>  eta_final <span class="ot">&lt;-</span> beta_final[<span class="dv">1</span>] <span class="sc">+</span> beta_final[<span class="dv">2</span>] <span class="sc">*</span> x</span>
+<span id="cb20-35"><a href="#cb20-35" aria-hidden="true" tabindex="-1"></a>  p_final <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta_final))</span>
+<span id="cb20-36"><a href="#cb20-36" aria-hidden="true" tabindex="-1"></a>  auc_app_final <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(<span class="fu">auc</span>(y, p_final))</span>
+<span id="cb20-37"><a href="#cb20-37" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-38"><a href="#cb20-38" aria-hidden="true" tabindex="-1"></a>  validated_auc <span class="ot">&lt;-</span> auc_app_final <span class="sc">-</span> avg_optimism</span>
+<span id="cb20-39"><a href="#cb20-39" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-40"><a href="#cb20-40" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">list</span>(</span>
+<span id="cb20-41"><a href="#cb20-41" aria-hidden="true" tabindex="-1"></a>    <span class="at">apparent =</span> <span class="fu">as.numeric</span>(auc_app_final),</span>
+<span id="cb20-42"><a href="#cb20-42" aria-hidden="true" tabindex="-1"></a>    <span class="at">optimism =</span> avg_optimism,</span>
+<span id="cb20-43"><a href="#cb20-43" aria-hidden="true" tabindex="-1"></a>    <span class="at">validated =</span> validated_auc</span>
+<span id="cb20-44"><a href="#cb20-44" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb20-45"><a href="#cb20-45" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb20-46"><a href="#cb20-46" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>validation_auc <span class="ot">&lt;-</span> <span class="fu">bootstrap_validate_auc</span>(sim_data)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(validation_auc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$apparent
+[1] 0.9061596
+
+$optimism
+[1] -0.003658499
+
+$validated
+[1] 0.9098181</code></pre>
+</div>
+</div>
 </section>
-<section id="bootstrap-r-code" class="level3">
-<h3 class="anchored" data-anchor-id="bootstrap-r-code">Bootstrap R code:</h3>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>B <span class="ot">&lt;-</span> <span class="dv">500</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>bootstrap_estimates <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, B, <span class="dv">2</span>)</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (b <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>B) {</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  idx <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span>n, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  X_b <span class="ot">&lt;-</span> X[idx, ]</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  y_b <span class="ot">&lt;-</span> y[idx]</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  beta_b <span class="ot">&lt;-</span> <span class="fu">glm</span>(y_b <span class="sc">~</span> X_b[,<span class="dv">2</span>], <span class="at">family=</span><span class="st">"binomial"</span>)<span class="sc">$</span>coefficients</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  bootstrap_estimates[b, ] <span class="ot">&lt;-</span> beta_b</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="fu">apply</span>(bootstrap_estimates, <span class="dv">2</span>, sd)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<hr>
-</section>
-<section id="cross-validation" class="level3">
-<h3 class="anchored" data-anchor-id="cross-validation">8. Cross-validation</h3>
-<p>Partition data into $K$ folds, train/test each fold.</p>
-</section>
-<section id="example-5-fold-cv-in-r" class="level3">
-<h3 class="anchored" data-anchor-id="example-5-fold-cv-in-r">Example 5-fold CV in R:</h3>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>K <span class="ot">&lt;-</span> <span class="dv">5</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>folds <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span>K, <span class="at">length.out =</span> n))</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>cv_error <span class="ot">&lt;-</span> <span class="fu">numeric</span>(K)</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>K) {</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  train_idx <span class="ot">&lt;-</span> <span class="fu">which</span>(folds <span class="sc">!=</span> k)</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  test_idx <span class="ot">&lt;-</span> <span class="fu">which</span>(folds <span class="sc">==</span> k)</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  fit <span class="ot">&lt;-</span> <span class="fu">glm</span>(y <span class="sc">~</span> x, <span class="at">family=</span><span class="st">"binomial"</span>, <span class="at">data=</span>sim_data[train_idx,])</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  preds <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit, sim_data[test_idx,], <span class="at">type=</span><span class="st">"response"</span>)</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  cv_error[k] <span class="ot">&lt;-</span> <span class="fu">mean</span>((sim_data<span class="sc">$</span>y[test_idx] <span class="sc">-</span> preds)<span class="sc">^</span><span class="dv">2</span>)</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(cv_error)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<hr>
-</section>
-<section id="comparison-of-bootstrap-and-cross-validation" class="level3">
-<h3 class="anchored" data-anchor-id="comparison-of-bootstrap-and-cross-validation">9. Comparison of Bootstrap and Cross-validation</h3>
-<p>Discuss strengths/weaknesses:</p>
-<ul>
-<li>Bootstrap gives parameter uncertainty.</li>
-<li>CV provides estimate of prediction error.</li>
-</ul>
-<hr>
-</section>
-<section id="extensions-and-practical-considerations" class="level3">
-<h3 class="anchored" data-anchor-id="extensions-and-practical-considerations">10. Extensions and Practical Considerations</h3>
-<p>Discuss regularization and connections to real-world datasets, and further work.</p>
-<hr>
+<section id="cross-validation" class="level2">
+<h2 class="anchored" data-anchor-id="cross-validation">10. Cross-validation</h2>
+<p>Lastly, we can validate by partitioning our data into <span class="math inline">\(K\)</span> folds, train/test each fold and measure average performance.</p>
+<section id="fold-cv-in-r" class="level3">
+<h3 class="anchored" data-anchor-id="fold-cv-in-r">5-fold CV in R:</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>cross_validate <span class="ot">&lt;-</span> <span class="cf">function</span>(data, <span class="at">K =</span> <span class="dv">5</span>, <span class="at">metric =</span> <span class="st">"auc"</span>) {</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(data)</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  partition <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span>K, <span class="at">length.out =</span> n))</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  perf <span class="ot">&lt;-</span> <span class="fu">numeric</span>(K)</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>K) {</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    train <span class="ot">&lt;-</span> data[partition <span class="sc">!=</span> k, ]</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    test  <span class="ot">&lt;-</span> data[partition <span class="sc">==</span> k, ]</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    model <span class="ot">&lt;-</span> <span class="fu">glm</span>(y <span class="sc">~</span> x, <span class="at">data =</span> train, <span class="at">family =</span> binomial)</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>    p <span class="ot">&lt;-</span> <span class="fu">predict</span>(model, <span class="at">newdata =</span> test)</span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>    y <span class="ot">&lt;-</span> test<span class="sc">$</span>y</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>    perf[k] <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(<span class="fu">auc</span>(y, p))</span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">per_fold =</span> perf, <span class="at">mean =</span> <span class="fu">mean</span>(perf))</span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>cv_auc <span class="ot">&lt;-</span> <span class="fu">cross_validate</span>(sim_data, <span class="at">K =</span> <span class="dv">5</span>, <span class="at">metric =</span> <span class="st">"auc"</span>)</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(cv_auc<span class="sc">$</span>mean, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.8965</code></pre>
+</div>
+</div>
 
 
-</section>
 </section>
 </section>
 

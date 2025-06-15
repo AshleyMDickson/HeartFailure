@@ -7,7 +7,7 @@ website:
   navbar:
     left:
       - href: index.qmd
-        text: Model
+        text: Welcome
       - uncertainty.qmd
 
 format:
