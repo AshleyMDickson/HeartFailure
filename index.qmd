@@ -1,6 +1,6 @@
 ---
 title: "Explorations in Binary Data"
-date: "06-16-2025"
+date: "07-04-2025"
 author: "Ashley Dickson"
 ---
 

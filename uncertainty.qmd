@@ -22,7 +22,7 @@ with parameters
 
 ```{r}
 set.seed(112358)
-n <- 100
+n <- 1000
 beta_0 <- -0.5
 beta_1 <- 2
 x <- rnorm(n)
@@ -30,10 +30,14 @@ eta <- beta_0 + beta_1 * x
 prob <- 1 / (1 + exp(-eta))
 y <- rbinom(n, 1, prob)
 sim_data <- data.frame(y, x, prob)
+data_sort <- sim_data[order(sim_data$x), ]
+
 plot(sim_data$x, sim_data$y,
      xlab = "Simulated x", ylab = "Simulated Y",
      main = "Simulated data for Logistic Regression"
 )
+lines(data_sort$x, data_sort$prob, col = "blue", lty = 2, lwd = 2)
+legend("topleft", legend = "True model", col = "blue", lty = 2, lwd = 2)
 ```
 
 ## 3. Logistic Model and Estimation
@@ -118,7 +122,7 @@ $$
 = \sum_{i=1}^{n} (y_i - \pi_i) x_{ij} = 0.
 $$
 
-However, this has no closed-form solution, so numerical methods are used to estimate $beta\_j$, e.g. Newton-Raphson. For this, we first need to derive the Score Function and the Hessian.
+However, this has no closed-form solution, so numerical methods are used to estimate $\beta_j$, e.g. Newton-Raphson. For this, we first need to derive the Score Function and the Hessian.
 
 ## 4. Gradient
 
@@ -240,6 +244,27 @@ compute_score <- function(beta0, beta1, data) {
 compute_score(beta0 = -0.5, beta1 = 2, data = sim_data)
 ```
 
+```{r}
+# Compare to GLM Hessian
+library(numDeriv)
+
+mod <- glm(y ~ x, family = "binomial", data =  sim_data)
+
+LL <- function(beta, X, y) {
+  eta <- X %*% beta
+  p <- 1 / (1 + exp(-eta))
+  sum(y * log(p) + (1 - y) * log(1 - p))
+}
+
+X <- model.matrix(mod)
+y <- mod$y
+est <- coef(mod)
+
+score_vec <- grad(LL, est, X = X, y = y)
+hessian_mat <- hessian(LL, est, X = X, y = y)
+print(score_vec)
+```
+
 ## 5. The Hessian
 
 To understand the curvature of the log-likelihood function near its stationary points, we need need the second derivatives.
@@ -257,7 +282,6 @@ Our goal is to differentiate this expression with respect to another parameter (
 $$
 \frac{\partial^2 \ell}{\partial \beta_j \partial \beta_k}
 $$
-
 
 We are interested in the derivative, which can be expressed as
 
@@ -300,7 +324,7 @@ $$
 
 Substitute back into the Hessian:
 
-We can now substitute these results back into the second derivative of the log-likelihood:
+We can now substitute this results back into the second derivative of the log-likelihood:
 
 $$
 \frac{\partial^2 \ell}{\partial \beta_j \partial \beta_k}
@@ -329,8 +353,7 @@ In arbitrary parameters, Hessian matrix is expressed in matrix form
 $$
 \mathbf{H}(\boldsymbol{\beta}) = \frac{\partial^2 \ell}{\partial \boldsymbol{\beta} \partial \boldsymbol{\beta}^\top}
 = - \mathbf{X}^\top \mathbf{W} \mathbf{X}
-$$
-where $W$ is diagonal with elements $p_i(1 - p_i)$.
+$$ where $W$ is diagonal with elements $p_i(1 - p_i)$.
 
 We can now represent the Hessian in code:
 
@@ -358,7 +381,13 @@ compute_hessian <- function(beta0, beta1, data) {
 compute_hessian(beta0 = -0.5, beta1 = 2, sim_data)
 ```
 
+```{r}
+print(hessian_mat)
+```
+
 The determinant $\det(H)$ here is positive, meaning that we have a maximum or a minimum. The negative sign on entry $(1,1)$ indicates a maximum.
+
+Comparison with the GLM() output reveals similarity with the manually calculated values, but not exact equality. Would we expect an exact match?
 
 ## 6. Newton-Raphson Algorithm
 
@@ -366,33 +395,55 @@ We are interested in solving for the values of $\boldsymbol{\beta}$ that maximis
 
 $$
 \boldsymbol{\beta_{t+1}} = \boldsymbol{\beta_t} - \boldsymbol{H^{-1}} \boldsymbol{U}
-$$ where U is the sciore vector (Jacobian) and H is the Hessian.
+$$ where U is the score vector (Jacobian) and H is the Hessian.
 
 ### R implementation:
 
 ```{r}
-NR <- function(data, beta_init = c(0, 0), iterations = 7) {
-  beta <- beta_init
-  n <- nrow(data)
-  x <- data$x
-  y <- data$y
-  
-  for (iter in 1:iterations) {
-    eta <- beta[1] + beta[2] * x
-    pi <- 1 / (1 + exp(-eta))
-    residual <- y - pi
-    score <- c(sum(residual), sum(residual * x))  # U_0, U_1
-    H <- compute_hessian(beta[1], beta[2], data)
-    
-    delta <- solve(H, score)  # H^{-1} * U
-    beta_new <- beta - delta
-    beta <- beta_new
-    #print(beta)
-  }
-  return(list(beta=beta, H=H))
+# LL = log-likelihood
+LL <- function(beta, x, y) {
+  eta <- beta[1] + beta[2] * x
+  pi <- 1 / (1 + exp(-eta))
+  sum(y * log(pi) + (1 - y) * log(1 - pi))
 }
 ```
 
+```{r}
+NR <- function(data, beta_init = c(0, 0), max_iter = 100, tol = 1e-6) {
+  beta <- beta_init
+  x <- data$x
+  y <- data$y
+  
+  LL_vals <- numeric()
+  
+  for (iter in 1:max_iter) {
+    eta <- beta[1] + beta[2] * x
+    pi <- 1 / (1 + exp(-eta))
+    residual <- y - pi
+    score <- c(sum(residual), sum(residual * x))
+    H <- compute_hessian(beta[1], beta[2], data)
+    
+    delta <- solve(H, score)
+    beta_new <- beta - delta
+    LL_vals[iter] <- LL(beta_new, x, y)
+    
+    # Euclidean loss function
+    if (sqrt(sum((beta_new - beta)^2)) < tol) {
+      #message(sprintf("Converged in %d iterations.", iter))
+      break
+    }
+    
+    beta <- beta_new
+  }
+  
+  return(list(beta = beta, H = H, LL = LL_vals))
+}
+```
+
+```{r}
+out <- NR(sim_data)
+plot(out$LL, type = "b" , main = "Log-Likelihood over NR iterations", xlab = "Iteration", ylab = "Log Likelihood (LL)")
+```
 
 ```{r}
 out <- NR(sim_data)
@@ -521,13 +572,14 @@ print(round(ci, 4))
 ```{r}
 bootstrap <- function(data, B) {
   n <- nrow(data)
-  beta_boot <- matrix(NA, nrow = B, ncol = 2)  # Store (beta_0, beta_1)
+  beta_boot <- matrix(NA, nrow = B, ncol = 2)  # Store for (beta_0, beta_1)
   
   for (b in 1:B) {
     idx <- sample(1:n, size = n, replace = TRUE)
     boot_data <- data[idx, ]
-    out <- NR(boot_data)
-    beta_boot[b, ] <- out$beta
+    # Use GLM() instead of NR()
+    out <- glm(y ~ x, family = "binomial", data = boot_data)
+    beta_boot[b, ] <- out$coefficients
   }
   
   colnames(beta_boot) <- c("beta_0", "beta_1")
@@ -546,7 +598,7 @@ round(cbind(Estimate = beta_boot, Variance = boot_var, SE = boot_se, t(boot_ci))
 
 ```
 
-The results are technically consistent with the above, but the CIs only just include the true values. Unclear whether this is due to a programming error, unsufficient sample size, or something else.
+The results are consistent with the above, but the CIs only just include the true values. Unclear whether this is due to a programming error, insufficient sample size, or something else.
 
 ## 9. Bootstrap Validation
 
@@ -573,12 +625,12 @@ bootstrap_validate_auc <- function(data, B = 200) {
     y_boot <- data_boot$y
     eta_boot <- beta_boot[1] + beta_boot[2] * x_boot
     p_boot <- 1 / (1 + exp(-eta_boot))
-    auc_boot <- suppressMessages(auc(y_boot, p_boot))
+    auc_boot <- auc(y_boot, p_boot, quiet = TRUE) # suppressMessages removed
     
     # AUC on original data
     eta_test <- beta_boot[1] + beta_boot[2] * x
     p_test <- 1 / (1 + exp(-eta_test))
-    auc_test <- suppressMessages(auc(y, p_test))
+    auc_test <- auc(y, p_test, quiet = TRUE)
     
     optimism[b] <- auc_boot - auc_test
   }
@@ -590,7 +642,7 @@ bootstrap_validate_auc <- function(data, B = 200) {
   beta_final <- final_fit$beta
   eta_final <- beta_final[1] + beta_final[2] * x
   p_final <- 1 / (1 + exp(-eta_final))
-  auc_app_final <- suppressMessages(auc(y, p_final))
+  auc_app_final <- auc(y, p_final, quiet = TRUE)
   
   validated_auc <- auc_app_final - avg_optimism
   
@@ -609,8 +661,52 @@ validation_auc <- bootstrap_validate_auc(sim_data)
 print(validation_auc)
 ```
 
-## 10. Cross-validation
+Compare the results of this with Harrell's lrm() and validate() methods from RMS.
 
+```{r, message=FALSE}
+library(rms)
+dd = datadist(sim_data)
+options(datadist = "dd")
+fit <- lrm(y ~ x, data = sim_data, x=TRUE, y=TRUE)
+print(fit)
+```
+
+```{r}
+val <- validate(fit, method="boot", B=200)
+val
+```
+
+Strangely, Harrell's validate() function does not report AUC directly; one has to calculate it manually from the reported Dxy (Somers' D) result:
+
+```{r}
+auc <- (val["Dxy", "index.corrected"] + 1) / 2
+print(auc)
+```
+
+This is a tiny bit higher than our manually calculated C-statistic, but nevertheless very close.
+
+We can visualise calibration also:
+
+```{r}
+cal <- calibrate(fit, method = "boot", B = 200)
+plot(cal)
+```
+
+While the fit()-reported C-statistic seems to comport well with the manually bootstrapped result, the validate() method doesn't report optimism in this directly – only on Dxy. This is because Harrell believes rank-correlation theory is a better grounding for discrimination. The two are related, however, by:
+
+$$
+D_{xy} = 2 \cdot (C - \frac{1}{2})
+$$
+
+so that
+
+$$
+\text{C-statistic (AUC)} = \frac{D_{xy} + 1}{2}
+$$
+
+Arguably, this accounts well for the problem with very low AUC values: an AUC of 0.1 is as surprising as an AUC of 0.9 in some way; even though the model does not predict correctly, it fails to do so in a systematic way. If what we seek to avoid is the absence of systematicity, where AUC=0.5, then Somers' D is probably preferable.
+
+## 10. Cross-validation
 
 Lastly, we can validate by partitioning our data into $K$ folds, train/test each fold and measure average performance.
 
