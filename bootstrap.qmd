@@ -1,0 +1,9 @@
+---
+title: "Bootstrapping & Sample Sizes"
+---
+
+Here will go some Bootstrapping stuff.
+
+$$
+\frac{\eta_i}{y_i}
+$$
