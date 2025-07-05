@@ -116,9 +116,29 @@ for (s in sample_sizes) {
 Each of these datapoints will be populated with either an AUC value or a calibration slope. Let's start with a simple function that will allow us to calculate a single result. Later we will wrap this inside a double-loop to populate the results list.
 
 ```{r}
-performance <- function() {
+library(pROC)
+sample500 <- sample_n(df, 500, replace = FALSE)
+# function of the dev data
+performance <- function(dev_data) {
+  bootstrap_data <- sample_n(dev_data, nrow(dev_data), replace = TRUE)
+  mod <- glm(y ~ ., family = "binomial", data = bootstrap_data)
+  pred_dev_reponse <- predict(mod, newdata = dev_data, type = "response")
+  auc <- roc(dev_data$y, pred_dev_reponse)$auc
+  #plot(auc)
   
+  # calibration slope
+  pred_dev_link <- predict(mod, newdata = dev_data, type = "link")
+  calibration_model <- glm(dev_data$y ~ pred_dev_link, family = "binomial")
+  slope <- coef(calibration_model)[2]
+  
+  return(
+    list(
+      auc, slope
+      )
+  )
 }
+
+performance(sample500)
 ```
 
 
