@@ -20,6 +20,40 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -165,10 +199,155 @@ window.Quarto = {
 </header>
 
 
-<p>Here will go some Bootstrapping stuff.</p>
-<p><span class="math display">\[
-\frac{\eta_i}{y_i}
-\]</span></p>
+<p>On the previous page, we ran through some manual bootstrapping for the purposes of showing their in-principle operation. There we used just a single predictor and a relatively small sample size.</p>
+<p>Now let’s try to develop a bigger bootstrap validation procedure with a bigger sample size and more covariates. Again, start by generating some sample data, this time with <span class="math inline">\(\beta_0=-1.5\)</span> and predictor effects <span class="math inline">\(\beta_k = 0.7\)</span> for <span class="math inline">\(1 \leq k \leq 10\)</span>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">100000</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>predictors <span class="ot">&lt;-</span> <span class="dv">10</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>beta_0 <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fl">1.5</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>beta <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fl">0.7</span>, predictors)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Matrix of linear predictors</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">rnorm</span>(n<span class="sc">*</span>predictors), <span class="at">nrow =</span> n, <span class="at">ncol =</span> predictors)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(X) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"x"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>eta <span class="ot">&lt;-</span> beta_0 <span class="sc">+</span> X <span class="sc">%*%</span> beta</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta))</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulate binary outcomes</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="at">size =</span> <span class="dv">1</span>, <span class="at">prob =</span> p)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">paste0</span>(<span class="st">"Hence a prevalence of "</span>, <span class="dv">100</span><span class="sc">*</span><span class="fu">mean</span>(y), <span class="st">"%"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Hence a prevalence of 29.445%"</code></pre>
+</div>
+</div>
+<p>Visualise:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(eta, <span class="at">breaks =</span> <span class="dv">100</span>, <span class="at">col =</span> <span class="st">"lightblue"</span>, <span class="at">main =</span> <span class="st">"Distribution of Linear Predictor"</span>,</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="fu">expression</span>(eta), <span class="at">freq =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="bootstrap_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(p, <span class="at">breaks =</span> <span class="dv">100</span>, <span class="at">col =</span> <span class="st">"lightgreen"</span>, <span class="at">main =</span> <span class="st">"Distribution of Predicted Probabilities"</span>,</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Predicted Probability"</span>, <span class="at">freq =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="bootstrap_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Create dataframe and model</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rms)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: Hmisc</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'Hmisc'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    format.pval, units</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(X)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>df<span class="sc">$</span>y <span class="ot">&lt;-</span> y</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>dd <span class="ot">&lt;-</span> <span class="fu">datadist</span>(df)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">datadist =</span> <span class="st">"dd"</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lrm</span>(y <span class="sc">~</span> ., <span class="at">data =</span> df, <span class="at">x=</span><span class="cn">TRUE</span>,<span class="at">y=</span><span class="cn">TRUE</span>)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Logistic Regression Model
+
+lrm(formula = y ~ ., data = df, x = TRUE, y = TRUE)
+
+                        Model Likelihood         Discrimination    Rank Discrim.    
+                              Ratio Test                Indexes          Indexes    
+Obs         1e+05    LR chi2    45241.99         R2       0.518    C       0.884    
+ 0          70555    d.f.             10      R2(10,1e+05)0.364    Dxy     0.768    
+ 1          29445    Pr(&gt; chi2)  &lt;0.0001    R2(10,62324.8)0.516    gamma   0.768    
+max |deriv| 0.002                                Brier    0.121    tau-a   0.319    
+
+          Coef    S.E.   Wald Z  Pr(&gt;|Z|)
+Intercept -1.5263 0.0112 -135.92 &lt;0.0001 
+x1         0.7150 0.0099   72.35 &lt;0.0001 
+x2         0.7075 0.0098   72.16 &lt;0.0001 
+x3         0.7175 0.0099   72.67 &lt;0.0001 
+x4         0.7042 0.0098   71.64 &lt;0.0001 
+x5         0.7061 0.0099   71.53 &lt;0.0001 
+x6         0.7127 0.0099   72.20 &lt;0.0001 
+x7         0.7014 0.0098   71.41 &lt;0.0001 
+x8         0.7016 0.0098   71.45 &lt;0.0001 
+x9         0.7088 0.0099   71.88 &lt;0.0001 
+x10        0.7083 0.0099   71.75 &lt;0.0001 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             Effects              Response : y 
+
+ Factor      Low      High    Diff.  Effect  S.E.     Lower 0.95 Upper 0.95
+ x1          -0.67020 0.67524 1.3454 0.96197 0.013296 0.93591    0.98803   
+  Odds Ratio -0.67020 0.67524 1.3454 2.61680       NA 2.54950    2.68590   
+ x2          -0.66835 0.67848 1.3468 0.95286 0.013205 0.92698    0.97874   
+  Odds Ratio -0.66835 0.67848 1.3468 2.59310       NA 2.52690    2.66110   
+ x3          -0.67441 0.67125 1.3457 0.96549 0.013287 0.93945    0.99153   
+  Odds Ratio -0.67441 0.67125 1.3457 2.62610       NA 2.55860    2.69540   
+ x4          -0.67749 0.67537 1.3529 0.95274 0.013299 0.92668    0.97881   
+  Odds Ratio -0.67749 0.67537 1.3529 2.59280       NA 2.52610    2.66130   
+ x5          -0.68016 0.66977 1.3499 0.95324 0.013326 0.92713    0.97936   
+  Odds Ratio -0.68016 0.66977 1.3499 2.59410       NA 2.52720    2.66280   
+ x6          -0.66803 0.67428 1.3423 0.95669 0.013250 0.93072    0.98266   
+  Odds Ratio -0.66803 0.67428 1.3423 2.60310       NA 2.53630    2.67160   
+ x7          -0.67511 0.67083 1.3459 0.94409 0.013222 0.91818    0.97001   
+  Odds Ratio -0.67511 0.67083 1.3459 2.57050       NA 2.50470    2.63800   
+ x8          -0.67653 0.67526 1.3518 0.94839 0.013273 0.92237    0.97440   
+  Odds Ratio -0.67653 0.67526 1.3518 2.58150       NA 2.51530    2.64960   
+ x9          -0.68055 0.66937 1.3499 0.95679 0.013311 0.93070    0.98288   
+  Odds Ratio -0.68055 0.66937 1.3499 2.60330       NA 2.53630    2.67210   
+ x10         -0.67122 0.67376 1.3450 0.95258 0.013276 0.92656    0.97860   
+  Odds Ratio -0.67122 0.67376 1.3450 2.59240       NA 2.52580    2.66070   </code></pre>
+</div>
+</div>
+<p>To do: what is an effect in this context? Why are these ORs different from <span class="math inline">\(\exp(\beta)\)</span></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">exp</span>(fit<span class="sc">$</span>coefficients)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Intercept        x1        x2        x3        x4        x5        x6        x7 
+0.2173358 2.0441591 2.0288680 2.0492737 2.0223079 2.0261622 2.0395351 2.0166470 
+       x8        x9       x10 
+2.0169322 2.0315059 2.0304352 </code></pre>
+</div>
+</div>
+<p>Initial Model Validation</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>val <span class="ot">&lt;-</span> <span class="fu">validate</span>(fit, <span class="at">method =</span> <span class="st">"boot"</span>, <span class="at">B =</span> <span class="dv">200</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>val</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>          index.orig training   test optimism index.corrected   n
+Dxy           0.7676   0.7677 0.7675   0.0002          0.7673 200
+R2            0.5181   0.5183 0.5180   0.0003          0.5177 200
+Intercept     0.0000   0.0000 0.0006  -0.0006          0.0006 200
+Slope         1.0000   1.0000 0.9994   0.0006          0.9994 200
+Emax          0.0000   0.0000 0.0002   0.0002          0.0002 200
+D             0.4524   0.4527 0.4523   0.0004          0.4521 200
+U             0.0000   0.0000 0.0000   0.0000          0.0000 200
+Q             0.4524   0.4527 0.4523   0.0004          0.4521 200
+B             0.1215   0.1214 0.1215  -0.0001          0.1215 200
+g             2.5318   2.5330 2.5313   0.0017          2.5301 200
+gp            0.3189   0.3190 0.3189   0.0001          0.3188 200</code></pre>
+</div>
+</div>
 
 
 
