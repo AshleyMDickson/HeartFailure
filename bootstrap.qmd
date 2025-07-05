@@ -2,6 +2,16 @@
 title: "Bootstrapping & Sample Sizes"
 ---
 
+Load required libraries:
+
+```{r, message=FALSE}
+library(rms)
+library(tidyverse)
+library(pROC)
+library(ggplot2)
+```
+
+
 On the previous page, we ran through some manual bootstrapping for the purposes of showing their in-principle operation. There we used just a single predictor and a relatively small sample size.
 
 Now let's try to develop a bigger bootstrap validation procedure with a bigger sample size and more covariates. Again, start by generating some sample data, this time with $\beta_0=-1.5$ and predictor effects $\beta_k = 0.7$ for $1 \leq k \leq 10$.
@@ -31,22 +41,23 @@ simulate_data <- function(k, n) {
 dgp_data <- simulate_data(k, n)
 df <- dgp_data$df
 print(paste0("Hence a prevalence of ", round(100 * mean(df$y), 2), "%"))
+glm(y ~ ., data = df, family = "binomial")
 ```
 
 Visualise:
 
 ```{r}
-hist(df$eta, breaks = 100, col = "lightblue", main = "Distribution of Linear Predictor",
+hist(dgp_data$eta, breaks = 100, col = "lightblue", main = "Distribution of Linear Predictor",
      xlab = expression(eta))#, freq = FALSE)
 ```
 
 ```{r}
-hist(df$p, breaks = 100, main = "Distribution of Probabilities",
+hist(dgp_data$p, breaks = 100, main = "Distribution of Probabilities",
      xlab = "Theoretical Probability")#, freq = FALSE)
 ```
 ```{r}
-library(ggplot2)
-ggplot(df, aes(x = eta, y = p)) +
+plot_data <- cbind(dgp_data$df, eta = dgp_data$eta, p = dgp_data$p)
+ggplot(plot_data, aes(x = eta, y = p)) +
   geom_line(stat = "function", fun = plogis, linewidth = 1) +
   labs(x = "Linear Predictor (η)", y = "Probability (p)", title = "Logistic Function: p = 1 / (1 + exp(-η))") +
   theme_minimal()
@@ -55,20 +66,13 @@ ggplot(df, aes(x = eta, y = p)) +
 ## Create dataframe and model
 
 ```{r}
-library(rms)
-df <- as.data.frame(X)
-df$y <- y
 dd <- datadist(df)
 options(datadist = "dd")
 fit <- lrm(y ~ ., data = df, x=TRUE,y=TRUE)
 print(fit)
 ```
 
-```{r}
-summary(fit)
-```
-
-To do: what is an effect in this context? Why are these ORs different from $\exp(\beta)$
+Odd ratios:
 
 ```{r}
 exp(fit$coefficients)
@@ -94,7 +98,7 @@ Let's start by setting up the basics:
 ```{r}
 df <- dgp_data$df
 
-sample_sizes <- c(100, 200, 300, 500, 1000)
+sample_sizes <- c(100, 200, 300, 500, 1000, 5000, 10000, 50000)
 B <- 200
 performance_metrics <- c('AUC', 'calibration_slope')
 ```
@@ -106,78 +110,138 @@ Hence we need to calculate 5 * 200 * 2 = 2000 data points, stored in a 4D data s
 Next let's set up a nested-list data structure to hold the results.
 
 ```{r}
+rm(results) # if needed
+```
+
+```{r}
 results <- list()
 for (s in sample_sizes) {
   results[[as.character(s)]] <- list(auc = numeric(B), slope = numeric(B))
 }
-#results
+fail_counts <- setNames(rep(0, length(sample_sizes)), sample_sizes)
 ```
 
-Each of these datapoints will be populated with either an AUC value or a calibration slope. Let's start with a simple function that will allow us to calculate a single result. Later we will wrap this inside a double-loop to populate the results list.
+Each of these datapoints will be populated with either an AUC value or a calibration slope. Let's start with a simple function that will allow us to calculate a single result-pair. Later we will wrap this inside a double-loop to populate the results list fully.
 
 ```{r}
-library(pROC)
-sample500 <- sample_n(df, 500, replace = FALSE)
-# function of the dev data
+sample300 <- sample_n(df, 300, replace = FALSE) #for testing
+
 performance <- function(dev_data) {
   bootstrap_data <- sample_n(dev_data, nrow(dev_data), replace = TRUE)
-  mod <- glm(y ~ ., family = "binomial", data = bootstrap_data)
+  mod <- suppressWarnings(glm(y ~ ., family = "binomial", data = bootstrap_data))
+  if (inherits(mod, "try-error") || !mod$converged) return(NULL)
+  
   pred_dev_reponse <- predict(mod, newdata = dev_data, type = "response")
-  auc <- roc(dev_data$y, pred_dev_reponse)$auc
-  #plot(auc)
+  auc <- as.numeric(roc(dev_data$y, pred_dev_reponse, quiet = TRUE)$auc)
   
   # calibration slope
   pred_dev_link <- predict(mod, newdata = dev_data, type = "link")
-  calibration_model <- glm(dev_data$y ~ pred_dev_link, family = "binomial")
-  slope <- coef(calibration_model)[2]
+  calibration_model <- suppressWarnings(glm(dev_data$y ~ pred_dev_link, family = "binomial"))
+  slope <- as.numeric(coef(calibration_model))[2]
   
   return(
     list(
-      auc, slope
+      auc = auc,
+      slope = slope
       )
   )
 }
 
-performance(sample500)
+res <- performance(sample300)
+res
+```
+
+Next, let's check that we can successfully populate our results list with just these two values in the 300 sample-size block.
+
+```{r}
+results[["300"]][["auc"]][[1]] <- res$auc
+results[["300"]][["slope"]][[1]] <- res$slope
+results
+```
+
+Then take the inner loop and draw B bootstrap samples and run the model on each, reporting AUC and calibration-slope for a single sample size; say 300. Again, wrap it in a function, and this time we will just fill up the `300` block of the result nested list.
+
+```{r}
+sample300 <- sample_n(df, 300, replace = FALSE)  # for testing purposes
+
+for (b in 1:200) {
+  res <- performance(sample300)
+  results[["300"]] [["auc"]] [b] <- res$auc
+  results[["300"]] [["slope"]] [b] <- res$slope
+}
 ```
 
 
+```{r}
+results[["300"]]
+```
 
-Now loop through the list of sample size, and for each sample size, take a development sample of that size.
-Then draw B bootstrap samples and run the model on each, reporting AUC and calibration-slope from both
-
+That all seems correct. It is interesting to note that AUC looks fairly stable here whereas the calibration slope seems more erratic, meaning we expect it to have higher variance than bigger sample sizes. Let's find out by now generalising and embedding this loop into another for-loop to cover the varying sample sizes.
 
 ```{r}
-library(pROC)
-library(tidyverse)
-
 for (s in sample_sizes) {
-  dev_sample <- sample_n(df, s, replace = FALSE)
+  test_sample <- sample_n(df, s, replace = FALSE)
   
   for (b in 1:B) {
-    boot_sample <- sample(dev_sample, s, replace = TRUE)
-    mod <- glm(y ~ ., family = "binomial", data = boot_sample)
-   # Make sure the prediction only uses the variables that were in the fitted model
-    pred_vars <- names(coef(mod))[-1]  # remove intercept
-    X_pred <- dev_sample[, pred_vars, drop = FALSE]
-
-    # Ensure X_pred has all the necessary variables, even if constant
-    for (var in pred_vars) {
-      if (!(var %in% names(X_pred))) {
-        X_pred[[var]] <- 0  # or any constant value
+    res <- performance(test_sample)
+    if (is.null(res)) {
+      fail_counts[as.character(s)] <- fail_counts[as.character(s)] + 1
+      next
+    }
+    results[[as.character(s)]] [["auc"]] [b] <- res$auc
+    results[[as.character(s)]] [["slope"]] [b] <- res$slope
   }
 }
+```
 
-pred_dev_p <- predict(mod, newdata = X_pred, type = "response")
-pred_dev_l <- predict(mod, newdata = X_pred, type = "link")
-    
-    auc <- roc(dev_sample$y, pred_dev_p, quiet = TRUE)$auc
-    #cal_mod <- glm(dev_sample$y ~ pred_dev_l, family = "binomial")
-    #slope <- coef(cal_mod)[2]
-    
-    results[[as.character(s)]] [["bootstrap"]] [["auc"]] [b] <- auc
-    #results[[as.character(s)]] [["bootstrap"]] [["slope"]] [b] <- slope
-  }
-}
+If successful, we should now have a full complement of AUC and Slope values across all of our sample sizes.
+
+```{r}
+results
+```
+
+```{r}
+fail_counts
+```
+
+## Plot results
+
+```{r}
+# Flatten into a data frame
+results_df <- map_dfr(names(results), function(s) {
+  tibble(
+    sample_size = as.integer(s),
+    auc = results[[s]]$auc,
+    slope = results[[s]]$slope
+  )
+})
+head(results_df)
+```
+
+```{r}
+results_long <- results_df %>%
+  pivot_longer(cols = c(auc, slope), names_to = "metric", values_to = "value")
+head(results_long, 10)
+```
+
+```{r}
+fail_df <- tibble(
+  sample_size = as.integer(names(fail_counts)),
+  failures = as.numeric(fail_counts)
+)
+fail_df
+```
+
+```{r}
+ggplot(results_long, 
+       aes(x = factor(sample_size), y = value, fill = metric)
+       ) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.5, 
+               position = position_dodge(width = 0.75)) +
+  scale_y_continuous(
+    name = "Model Performance"
+  ) +
+  labs(x = "Sample Size", fill = "Metric", color = "Metric", title = "Bootstrap Model Performance vs Sample Size") +
+  theme_minimal()
 ```
 
