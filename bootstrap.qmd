@@ -26,7 +26,7 @@ beta <- rep(0.7, k)
 simulate_data <- function(k, n) {
   X <- matrix(rnorm(n*k), nrow = n, ncol = k)
   colnames(X) <- paste0("x", 1:k)
-  eta <- beta_0 + X %*% beta
+  eta <- beta_0 + X%*%beta
   p <- 1 / (1 + exp(-eta))
   y <- rbinom(n, size = 1, prob = p)
   return(
