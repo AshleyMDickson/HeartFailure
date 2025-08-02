@@ -8,8 +8,6 @@ website:
     left:
       - href: index.qmd
         text: Welcome
-      - uncertainty.qmd
-      - bootstrap.qmd
 
 format:
   html:
