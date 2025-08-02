@@ -155,14 +155,6 @@ window.Quarto = {
     <a class="nav-link" href="./index.html"> 
 <span class="menu-text">Welcome</span></a>
   </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./uncertainty.html"> 
-<span class="menu-text">Some topics in LR</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link active" href="./bootstrap.html" aria-current="page"> 
-<span class="menu-text">Bootstrapping &amp; Sample Sizes</span></a>
-  </li>  
 </ul>
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
@@ -227,7 +219,7 @@ window.Quarto = {
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>simulate_data <span class="ot">&lt;-</span> <span class="cf">function</span>(k, n) {</span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  X <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">rnorm</span>(n<span class="sc">*</span>k), <span class="at">nrow =</span> n, <span class="at">ncol =</span> k)</span>
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(X) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"x"</span>, <span class="dv">1</span><span class="sc">:</span>k)</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> beta_0 <span class="sc">+</span> X <span class="sc">%*%</span> beta</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> beta_0 <span class="sc">+</span> X<span class="sc">%*%</span>beta</span>
 <span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  p <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta))</span>
 <span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="at">size =</span> <span class="dv">1</span>, <span class="at">prob =</span> p)</span>
 <span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(</span>

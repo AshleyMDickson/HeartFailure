@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Ashley Dickson">
-<meta name="dcterms.date" content="2025-07-04">
+<meta name="dcterms.date" content="2025-02-08">
 
 <title>Explorations in Binary Data – Modelling Binary Outcomes</title>
 <style>
@@ -21,6 +21,40 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -94,14 +128,6 @@ ul.task-list li input[type="checkbox"] {
     <a class="nav-link active" href="./index.html" aria-current="page"> 
 <span class="menu-text">Welcome</span></a>
   </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./uncertainty.html"> 
-<span class="menu-text">Some topics in LR</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./bootstrap.html"> 
-<span class="menu-text">Bootstrapping &amp; Sample Sizes</span></a>
-  </li>  
 </ul>
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
@@ -144,7 +170,7 @@ ul.task-list li input[type="checkbox"] {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">July 4, 2025</p>
+      <p class="date">February 8, 2025</p>
     </div>
   </div>
   
@@ -159,11 +185,783 @@ ul.task-list li input[type="checkbox"] {
 <section id="introduction" class="level1">
 <h1>Introduction</h1>
 <p>
-Here I focus on measures of estimate uncertainty in Logistic Regression. Previous topics have been hidden for now.
+Here I focus on model validation in Logistic Regression to answer the question of whether internal validation can be a decent proxy for external validation. Previous topics have been hidden for now.
 </p>
-<p>
-Please navigate to <a href="https://ashleymdickson.github.io/HeartFailure/uncertainty.html">Some Topics in LR</a>.
-</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Bootstrap vs External Validation Simulation Study</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Research Question: Can internal validation be a decent proxy for external validation?</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rms)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: Hmisc</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'Hmisc'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    format.pval, units</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'dplyr'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:Hmisc':
+
+    src, summarize</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:stats':
+
+    filter, lag</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pROC)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Type 'citation("pROC")' for a citation.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'pROC'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:stats':
+
+    cov, smooth, var</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set seed</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Running simulations sequentially (no parallel processing for debugging)</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Running simulations sequentially (no parallel processing for debugging)</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate simulated data with uncorrelated predictors</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>generate_data <span class="ot">&lt;-</span> <span class="cf">function</span>(n, <span class="at">n_predictors =</span> <span class="dv">10</span>, <span class="at">intercept =</span> <span class="sc">-</span><span class="fl">1.5</span>, <span class="at">coef_value =</span> <span class="fl">0.7</span>) {</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  X <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">rnorm</span>(n <span class="sc">*</span> n_predictors), <span class="at">nrow =</span> n, <span class="at">ncol =</span> n_predictors)</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(X) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"x"</span>, <span class="dv">1</span><span class="sc">:</span>n_predictors)</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  linear_pred <span class="ot">&lt;-</span> intercept <span class="sc">+</span> X <span class="sc">%*%</span> <span class="fu">rep</span>(coef_value, n_predictors)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, <span class="fu">plogis</span>(linear_pred))</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(<span class="at">y =</span> y, X)</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate calibration slope</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>calc_calibration_slope <span class="ot">&lt;-</span> <span class="cf">function</span>(model, newdata) {</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  pred_prob <span class="ot">&lt;-</span> <span class="fu">predict</span>(model, <span class="at">newdata =</span> newdata, <span class="at">type =</span> <span class="st">"fitted"</span>)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  cal_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">y =</span> newdata<span class="sc">$</span>y, <span class="at">logit_pred =</span> <span class="fu">qlogis</span>(pred_prob))</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coef</span>(<span class="fu">glm</span>(y <span class="sc">~</span> logit_pred, <span class="at">data =</span> cal_data, <span class="at">family =</span> binomial))[<span class="dv">2</span>]</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Single simulation for parallel processing</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>run_single_simulation <span class="ot">&lt;-</span> <span class="cf">function</span>(sim_id, n_train, n_external, n_bootstrap) {</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Generate data with explicit parameters</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  train_data <span class="ot">&lt;-</span> <span class="fu">generate_data</span>(n_train, <span class="at">n_predictors =</span> <span class="dv">10</span>, <span class="at">intercept =</span> <span class="sc">-</span><span class="fl">1.5</span>, <span class="at">coef_value =</span> <span class="fl">0.7</span>)</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  external_data <span class="ot">&lt;-</span> <span class="fu">generate_data</span>(n_external, <span class="at">n_predictors =</span> <span class="dv">10</span>, <span class="at">intercept =</span> <span class="sc">-</span><span class="fl">1.5</span>, <span class="at">coef_value =</span> <span class="fl">0.7</span>)</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  dd <span class="ot">&lt;-</span> <span class="fu">datadist</span>(train_data)</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">options</span>(<span class="at">datadist =</span> <span class="st">"dd"</span>)</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  formula_str <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="st">"y ~"</span>, <span class="fu">paste</span>(<span class="fu">paste0</span>(<span class="st">"x"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>), <span class="at">collapse =</span> <span class="st">" + "</span>))</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>  model <span class="ot">&lt;-</span> <span class="fu">lrm</span>(<span class="fu">as.formula</span>(formula_str), <span class="at">data =</span> train_data, <span class="at">x =</span> <span class="cn">TRUE</span>, <span class="at">y =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>  external_cal_slope <span class="ot">&lt;-</span> <span class="fu">calc_calibration_slope</span>(model, external_data)</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>  bootstrap_val <span class="ot">&lt;-</span> <span class="fu">validate</span>(model, <span class="at">method =</span> <span class="st">"boot"</span>, <span class="at">B =</span> n_bootstrap)</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>  bootstrap_cal_slope <span class="ot">&lt;-</span> bootstrap_val[<span class="st">"Slope"</span>, <span class="st">"index.corrected"</span>]</span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(<span class="at">sim =</span> sim_id, <span class="at">n_train =</span> n_train, </span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>             <span class="at">external_cal_slope =</span> external_cal_slope,</span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>             <span class="at">bootstrap_cal_slope =</span> bootstrap_cal_slope)</span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Main simulation function (simplified without parallel processing)</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>run_simulation <span class="ot">&lt;-</span> <span class="cf">function</span>(n_train, n_external, <span class="at">n_sims =</span> <span class="dv">50</span>, <span class="at">n_bootstrap =</span> <span class="dv">200</span>) {</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Running"</span>, n_sims, <span class="st">"simulations for n ="</span>, n_train, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  results <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">"list"</span>, n_sims)</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  start_time <span class="ot">&lt;-</span> <span class="fu">Sys.time</span>()</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n_sims) {</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (i <span class="sc">%%</span> <span class="dv">10</span> <span class="sc">==</span> <span class="dv">0</span>) <span class="fu">cat</span>(<span class="st">"  Simulation"</span>, i, <span class="st">"of"</span>, n_sims, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>    results[[i]] <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>({</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">run_single_simulation</span>(i, n_train, n_external, n_bootstrap)</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>    }, <span class="at">error =</span> <span class="cf">function</span>(e) {</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">cat</span>(<span class="st">"Error in simulation"</span>, i, <span class="st">":"</span>, e<span class="sc">$</span>message, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">data.frame</span>(<span class="at">sim =</span> i, <span class="at">n_train =</span> n_train, </span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>                <span class="at">external_cal_slope =</span> <span class="cn">NA</span>, <span class="at">bootstrap_cal_slope =</span> <span class="cn">NA</span>)</span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>    })</span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>  combined_results <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, results)</span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a>  combined_results <span class="ot">&lt;-</span> combined_results[<span class="sc">!</span><span class="fu">is.na</span>(combined_results<span class="sc">$</span>external_cal_slope), ]</span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Completed"</span>, <span class="fu">nrow</span>(combined_results), <span class="st">"simulations in"</span>, </span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a>      <span class="fu">round</span>(<span class="fu">as.numeric</span>(<span class="fu">Sys.time</span>() <span class="sc">-</span> start_time, <span class="at">units =</span> <span class="st">"secs"</span>), <span class="dv">1</span>), <span class="st">"seconds</span><span class="sc">\n\n</span><span class="st">"</span>)</span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(combined_results)</span>
+<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create box plot across sample sizes</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>create_sample_size_boxplot <span class="ot">&lt;-</span> <span class="cf">function</span>(all_results) {</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  plot_data <span class="ot">&lt;-</span> all_results <span class="sc">%&gt;%</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(sim, n_train, external_cal_slope, bootstrap_cal_slope) <span class="sc">%&gt;%</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">c</span>(external_cal_slope, bootstrap_cal_slope),</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>                 <span class="at">names_to =</span> <span class="st">"validation_type"</span>, <span class="at">values_to =</span> <span class="st">"calibration_slope"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">validation_type =</span> <span class="fu">case_when</span>(</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>      validation_type <span class="sc">==</span> <span class="st">"external_cal_slope"</span> <span class="sc">~</span> <span class="st">"External Validation"</span>,</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>      validation_type <span class="sc">==</span> <span class="st">"bootstrap_cal_slope"</span> <span class="sc">~</span> <span class="st">"Bootstrap Validation"</span>),</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">n_train =</span> <span class="fu">factor</span>(n_train)) <span class="sc">%&gt;%</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(calibration_slope))</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(plot_data, <span class="fu">aes</span>(<span class="at">x =</span> n_train, <span class="at">y =</span> calibration_slope, <span class="at">fill =</span> validation_type)) <span class="sc">+</span></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_boxplot</span>(<span class="at">alpha =</span> <span class="fl">0.7</span>, <span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="fl">0.8</span>)) <span class="sc">+</span></span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">1</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">size =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"External Validation"</span> <span class="ot">=</span> <span class="st">"lightblue"</span>, </span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>                                <span class="st">"Bootstrap Validation"</span> <span class="ot">=</span> <span class="st">"lightcoral"</span>)) <span class="sc">+</span></span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Calibration Slope by Sample Size: Bootstrap vs External Validation"</span>,</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>         <span class="at">subtitle =</span> <span class="st">"Dashed red line at slope = 1 (perfect calibration)"</span>,</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>         <span class="at">x =</span> <span class="st">"Sample Size"</span>, <span class="at">y =</span> <span class="st">"Calibration Slope"</span>, <span class="at">fill =</span> <span class="st">"Validation Type"</span>) <span class="sc">+</span></span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>, <span class="at">size =</span> <span class="dv">14</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>          <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>, <span class="at">size =</span> <span class="dv">11</span>),</span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>          <span class="at">legend.position =</span> <span class="st">"bottom"</span>)</span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ============================================================================</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="co"># RUN SIMULATION</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="co"># ============================================================================</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>total_start_time <span class="ot">&lt;-</span> <span class="fu">Sys.time</span>()</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>sample_sizes <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">50</span>, <span class="dv">100</span>, <span class="dv">200</span>, <span class="dv">300</span>, <span class="dv">400</span>, <span class="dv">500</span>, <span class="dv">750</span>, <span class="dv">1000</span>, <span class="dv">1500</span>, <span class="dv">2000</span>)</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Running simulations for sample sizes:"</span>, <span class="fu">paste</span>(sample_sizes, <span class="at">collapse =</span> <span class="st">", "</span>), <span class="st">"</span><span class="sc">\n\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Running simulations for sample sizes: 50, 100, 200, 300, 400, 500, 750, 1000, 1500, 2000 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>all_results <span class="ot">&lt;-</span> <span class="fu">lapply</span>(sample_sizes, <span class="cf">function</span>(n) <span class="fu">run_simulation</span>(n, n))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Running 50 simulations for n = 50 
+Error in simulation 1 : dataset dd not found for options(datadist=) 
+Error in simulation 2 : dataset dd not found for options(datadist=) 
+Error in simulation 3 : dataset dd not found for options(datadist=) 
+Error in simulation 4 : dataset dd not found for options(datadist=) 
+Error in simulation 5 : dataset dd not found for options(datadist=) 
+Error in simulation 6 : dataset dd not found for options(datadist=) 
+Error in simulation 7 : dataset dd not found for options(datadist=) 
+Error in simulation 8 : dataset dd not found for options(datadist=) 
+Error in simulation 9 : dataset dd not found for options(datadist=) 
+  Simulation 10 of 50 
+Error in simulation 10 : dataset dd not found for options(datadist=) 
+Error in simulation 11 : dataset dd not found for options(datadist=) 
+Error in simulation 12 : dataset dd not found for options(datadist=) 
+Error in simulation 13 : dataset dd not found for options(datadist=) 
+Error in simulation 14 : dataset dd not found for options(datadist=) 
+Error in simulation 15 : dataset dd not found for options(datadist=) 
+Error in simulation 16 : dataset dd not found for options(datadist=) 
+Error in simulation 17 : dataset dd not found for options(datadist=) 
+Error in simulation 18 : dataset dd not found for options(datadist=) 
+Error in simulation 19 : dataset dd not found for options(datadist=) 
+  Simulation 20 of 50 
+Error in simulation 20 : dataset dd not found for options(datadist=) 
+Error in simulation 21 : dataset dd not found for options(datadist=) 
+Error in simulation 22 : dataset dd not found for options(datadist=) 
+Error in simulation 23 : dataset dd not found for options(datadist=) 
+Error in simulation 24 : dataset dd not found for options(datadist=) 
+Error in simulation 25 : dataset dd not found for options(datadist=) 
+Error in simulation 26 : dataset dd not found for options(datadist=) 
+Error in simulation 27 : dataset dd not found for options(datadist=) 
+Error in simulation 28 : dataset dd not found for options(datadist=) 
+Error in simulation 29 : dataset dd not found for options(datadist=) 
+  Simulation 30 of 50 
+Error in simulation 30 : dataset dd not found for options(datadist=) 
+Error in simulation 31 : dataset dd not found for options(datadist=) 
+Error in simulation 32 : dataset dd not found for options(datadist=) 
+Error in simulation 33 : dataset dd not found for options(datadist=) 
+Error in simulation 34 : dataset dd not found for options(datadist=) 
+Error in simulation 35 : dataset dd not found for options(datadist=) 
+Error in simulation 36 : dataset dd not found for options(datadist=) 
+Error in simulation 37 : dataset dd not found for options(datadist=) 
+Error in simulation 38 : dataset dd not found for options(datadist=) 
+Error in simulation 39 : dataset dd not found for options(datadist=) 
+  Simulation 40 of 50 
+Error in simulation 40 : dataset dd not found for options(datadist=) 
+Error in simulation 41 : dataset dd not found for options(datadist=) 
+Error in simulation 42 : dataset dd not found for options(datadist=) 
+Error in simulation 43 : dataset dd not found for options(datadist=) 
+Error in simulation 44 : dataset dd not found for options(datadist=) 
+Error in simulation 45 : dataset dd not found for options(datadist=) 
+Error in simulation 46 : dataset dd not found for options(datadist=) 
+Error in simulation 47 : dataset dd not found for options(datadist=) 
+Error in simulation 48 : dataset dd not found for options(datadist=) 
+Error in simulation 49 : dataset dd not found for options(datadist=) 
+  Simulation 50 of 50 
+Error in simulation 50 : dataset dd not found for options(datadist=) 
+Completed 0 simulations in 0.1 seconds
+
+Running 50 simulations for n = 100 
+Error in simulation 1 : dataset dd not found for options(datadist=) 
+Error in simulation 2 : dataset dd not found for options(datadist=) 
+Error in simulation 3 : dataset dd not found for options(datadist=) 
+Error in simulation 4 : dataset dd not found for options(datadist=) 
+Error in simulation 5 : dataset dd not found for options(datadist=) 
+Error in simulation 6 : dataset dd not found for options(datadist=) 
+Error in simulation 7 : dataset dd not found for options(datadist=) 
+Error in simulation 8 : dataset dd not found for options(datadist=) 
+Error in simulation 9 : dataset dd not found for options(datadist=) 
+  Simulation 10 of 50 
+Error in simulation 10 : dataset dd not found for options(datadist=) 
+Error in simulation 11 : dataset dd not found for options(datadist=) 
+Error in simulation 12 : dataset dd not found for options(datadist=) 
+Error in simulation 13 : dataset dd not found for options(datadist=) 
+Error in simulation 14 : dataset dd not found for options(datadist=) 
+Error in simulation 15 : dataset dd not found for options(datadist=) 
+Error in simulation 16 : dataset dd not found for options(datadist=) 
+Error in simulation 17 : dataset dd not found for options(datadist=) 
+Error in simulation 18 : dataset dd not found for options(datadist=) 
+Error in simulation 19 : dataset dd not found for options(datadist=) 
+  Simulation 20 of 50 
+Error in simulation 20 : dataset dd not found for options(datadist=) 
+Error in simulation 21 : dataset dd not found for options(datadist=) 
+Error in simulation 22 : dataset dd not found for options(datadist=) 
+Error in simulation 23 : dataset dd not found for options(datadist=) 
+Error in simulation 24 : dataset dd not found for options(datadist=) 
+Error in simulation 25 : dataset dd not found for options(datadist=) 
+Error in simulation 26 : dataset dd not found for options(datadist=) 
+Error in simulation 27 : dataset dd not found for options(datadist=) 
+Error in simulation 28 : dataset dd not found for options(datadist=) 
+Error in simulation 29 : dataset dd not found for options(datadist=) 
+  Simulation 30 of 50 
+Error in simulation 30 : dataset dd not found for options(datadist=) 
+Error in simulation 31 : dataset dd not found for options(datadist=) 
+Error in simulation 32 : dataset dd not found for options(datadist=) 
+Error in simulation 33 : dataset dd not found for options(datadist=) 
+Error in simulation 34 : dataset dd not found for options(datadist=) 
+Error in simulation 35 : dataset dd not found for options(datadist=) 
+Error in simulation 36 : dataset dd not found for options(datadist=) 
+Error in simulation 37 : dataset dd not found for options(datadist=) 
+Error in simulation 38 : dataset dd not found for options(datadist=) 
+Error in simulation 39 : dataset dd not found for options(datadist=) 
+  Simulation 40 of 50 
+Error in simulation 40 : dataset dd not found for options(datadist=) 
+Error in simulation 41 : dataset dd not found for options(datadist=) 
+Error in simulation 42 : dataset dd not found for options(datadist=) 
+Error in simulation 43 : dataset dd not found for options(datadist=) 
+Error in simulation 44 : dataset dd not found for options(datadist=) 
+Error in simulation 45 : dataset dd not found for options(datadist=) 
+Error in simulation 46 : dataset dd not found for options(datadist=) 
+Error in simulation 47 : dataset dd not found for options(datadist=) 
+Error in simulation 48 : dataset dd not found for options(datadist=) 
+Error in simulation 49 : dataset dd not found for options(datadist=) 
+  Simulation 50 of 50 
+Error in simulation 50 : dataset dd not found for options(datadist=) 
+Completed 0 simulations in 0.1 seconds
+
+Running 50 simulations for n = 200 
+Error in simulation 1 : dataset dd not found for options(datadist=) 
+Error in simulation 2 : dataset dd not found for options(datadist=) 
+Error in simulation 3 : dataset dd not found for options(datadist=) 
+Error in simulation 4 : dataset dd not found for options(datadist=) 
+Error in simulation 5 : dataset dd not found for options(datadist=) 
+Error in simulation 6 : dataset dd not found for options(datadist=) 
+Error in simulation 7 : dataset dd not found for options(datadist=) 
+Error in simulation 8 : dataset dd not found for options(datadist=) 
+Error in simulation 9 : dataset dd not found for options(datadist=) 
+  Simulation 10 of 50 
+Error in simulation 10 : dataset dd not found for options(datadist=) 
+Error in simulation 11 : dataset dd not found for options(datadist=) 
+Error in simulation 12 : dataset dd not found for options(datadist=) 
+Error in simulation 13 : dataset dd not found for options(datadist=) 
+Error in simulation 14 : dataset dd not found for options(datadist=) 
+Error in simulation 15 : dataset dd not found for options(datadist=) 
+Error in simulation 16 : dataset dd not found for options(datadist=) 
+Error in simulation 17 : dataset dd not found for options(datadist=) 
+Error in simulation 18 : dataset dd not found for options(datadist=) 
+Error in simulation 19 : dataset dd not found for options(datadist=) 
+  Simulation 20 of 50 
+Error in simulation 20 : dataset dd not found for options(datadist=) 
+Error in simulation 21 : dataset dd not found for options(datadist=) 
+Error in simulation 22 : dataset dd not found for options(datadist=) 
+Error in simulation 23 : dataset dd not found for options(datadist=) 
+Error in simulation 24 : dataset dd not found for options(datadist=) 
+Error in simulation 25 : dataset dd not found for options(datadist=) 
+Error in simulation 26 : dataset dd not found for options(datadist=) 
+Error in simulation 27 : dataset dd not found for options(datadist=) 
+Error in simulation 28 : dataset dd not found for options(datadist=) 
+Error in simulation 29 : dataset dd not found for options(datadist=) 
+  Simulation 30 of 50 
+Error in simulation 30 : dataset dd not found for options(datadist=) 
+Error in simulation 31 : dataset dd not found for options(datadist=) 
+Error in simulation 32 : dataset dd not found for options(datadist=) 
+Error in simulation 33 : dataset dd not found for options(datadist=) 
+Error in simulation 34 : dataset dd not found for options(datadist=) 
+Error in simulation 35 : dataset dd not found for options(datadist=) 
+Error in simulation 36 : dataset dd not found for options(datadist=) 
+Error in simulation 37 : dataset dd not found for options(datadist=) 
+Error in simulation 38 : dataset dd not found for options(datadist=) 
+Error in simulation 39 : dataset dd not found for options(datadist=) 
+  Simulation 40 of 50 
+Error in simulation 40 : dataset dd not found for options(datadist=) 
+Error in simulation 41 : dataset dd not found for options(datadist=) 
+Error in simulation 42 : dataset dd not found for options(datadist=) 
+Error in simulation 43 : dataset dd not found for options(datadist=) 
+Error in simulation 44 : dataset dd not found for options(datadist=) 
+Error in simulation 45 : dataset dd not found for options(datadist=) 
+Error in simulation 46 : dataset dd not found for options(datadist=) 
+Error in simulation 47 : dataset dd not found for options(datadist=) 
+Error in simulation 48 : dataset dd not found for options(datadist=) 
+Error in simulation 49 : dataset dd not found for options(datadist=) 
+  Simulation 50 of 50 
+Error in simulation 50 : dataset dd not found for options(datadist=) 
+Completed 0 simulations in 0.1 seconds
+
+Running 50 simulations for n = 300 
+Error in simulation 1 : dataset dd not found for options(datadist=) 
+Error in simulation 2 : dataset dd not found for options(datadist=) 
+Error in simulation 3 : dataset dd not found for options(datadist=) 
+Error in simulation 4 : dataset dd not found for options(datadist=) 
+Error in simulation 5 : dataset dd not found for options(datadist=) 
+Error in simulation 6 : dataset dd not found for options(datadist=) 
+Error in simulation 7 : dataset dd not found for options(datadist=) 
+Error in simulation 8 : dataset dd not found for options(datadist=) 
+Error in simulation 9 : dataset dd not found for options(datadist=) 
+  Simulation 10 of 50 
+Error in simulation 10 : dataset dd not found for options(datadist=) 
+Error in simulation 11 : dataset dd not found for options(datadist=) 
+Error in simulation 12 : dataset dd not found for options(datadist=) 
+Error in simulation 13 : dataset dd not found for options(datadist=) 
+Error in simulation 14 : dataset dd not found for options(datadist=) 
+Error in simulation 15 : dataset dd not found for options(datadist=) 
+Error in simulation 16 : dataset dd not found for options(datadist=) 
+Error in simulation 17 : dataset dd not found for options(datadist=) 
+Error in simulation 18 : dataset dd not found for options(datadist=) 
+Error in simulation 19 : dataset dd not found for options(datadist=) 
+  Simulation 20 of 50 
+Error in simulation 20 : dataset dd not found for options(datadist=) 
+Error in simulation 21 : dataset dd not found for options(datadist=) 
+Error in simulation 22 : dataset dd not found for options(datadist=) 
+Error in simulation 23 : dataset dd not found for options(datadist=) 
+Error in simulation 24 : dataset dd not found for options(datadist=) 
+Error in simulation 25 : dataset dd not found for options(datadist=) 
+Error in simulation 26 : dataset dd not found for options(datadist=) 
+Error in simulation 27 : dataset dd not found for options(datadist=) 
+Error in simulation 28 : dataset dd not found for options(datadist=) 
+Error in simulation 29 : dataset dd not found for options(datadist=) 
+  Simulation 30 of 50 
+Error in simulation 30 : dataset dd not found for options(datadist=) 
+Error in simulation 31 : dataset dd not found for options(datadist=) 
+Error in simulation 32 : dataset dd not found for options(datadist=) 
+Error in simulation 33 : dataset dd not found for options(datadist=) 
+Error in simulation 34 : dataset dd not found for options(datadist=) 
+Error in simulation 35 : dataset dd not found for options(datadist=) 
+Error in simulation 36 : dataset dd not found for options(datadist=) 
+Error in simulation 37 : dataset dd not found for options(datadist=) 
+Error in simulation 38 : dataset dd not found for options(datadist=) 
+Error in simulation 39 : dataset dd not found for options(datadist=) 
+  Simulation 40 of 50 
+Error in simulation 40 : dataset dd not found for options(datadist=) 
+Error in simulation 41 : dataset dd not found for options(datadist=) 
+Error in simulation 42 : dataset dd not found for options(datadist=) 
+Error in simulation 43 : dataset dd not found for options(datadist=) 
+Error in simulation 44 : dataset dd not found for options(datadist=) 
+Error in simulation 45 : dataset dd not found for options(datadist=) 
+Error in simulation 46 : dataset dd not found for options(datadist=) 
+Error in simulation 47 : dataset dd not found for options(datadist=) 
+Error in simulation 48 : dataset dd not found for options(datadist=) 
+Error in simulation 49 : dataset dd not found for options(datadist=) 
+  Simulation 50 of 50 
+Error in simulation 50 : dataset dd not found for options(datadist=) 
+Completed 0 simulations in 0.1 seconds
+
+Running 50 simulations for n = 400 
+Error in simulation 1 : dataset dd not found for options(datadist=) 
+Error in simulation 2 : dataset dd not found for options(datadist=) 
+Error in simulation 3 : dataset dd not found for options(datadist=) 
+Error in simulation 4 : dataset dd not found for options(datadist=) 
+Error in simulation 5 : dataset dd not found for options(datadist=) 
+Error in simulation 6 : dataset dd not found for options(datadist=) 
+Error in simulation 7 : dataset dd not found for options(datadist=) 
+Error in simulation 8 : dataset dd not found for options(datadist=) 
+Error in simulation 9 : dataset dd not found for options(datadist=) 
+  Simulation 10 of 50 
+Error in simulation 10 : dataset dd not found for options(datadist=) 
+Error in simulation 11 : dataset dd not found for options(datadist=) 
+Error in simulation 12 : dataset dd not found for options(datadist=) 
+Error in simulation 13 : dataset dd not found for options(datadist=) 
+Error in simulation 14 : dataset dd not found for options(datadist=) 
+Error in simulation 15 : dataset dd not found for options(datadist=) 
+Error in simulation 16 : dataset dd not found for options(datadist=) 
+Error in simulation 17 : dataset dd not found for options(datadist=) 
+Error in simulation 18 : dataset dd not found for options(datadist=) 
+Error in simulation 19 : dataset dd not found for options(datadist=) 
+  Simulation 20 of 50 
+Error in simulation 20 : dataset dd not found for options(datadist=) 
+Error in simulation 21 : dataset dd not found for options(datadist=) 
+Error in simulation 22 : dataset dd not found for options(datadist=) 
+Error in simulation 23 : dataset dd not found for options(datadist=) 
+Error in simulation 24 : dataset dd not found for options(datadist=) 
+Error in simulation 25 : dataset dd not found for options(datadist=) 
+Error in simulation 26 : dataset dd not found for options(datadist=) 
+Error in simulation 27 : dataset dd not found for options(datadist=) 
+Error in simulation 28 : dataset dd not found for options(datadist=) 
+Error in simulation 29 : dataset dd not found for options(datadist=) 
+  Simulation 30 of 50 
+Error in simulation 30 : dataset dd not found for options(datadist=) 
+Error in simulation 31 : dataset dd not found for options(datadist=) 
+Error in simulation 32 : dataset dd not found for options(datadist=) 
+Error in simulation 33 : dataset dd not found for options(datadist=) 
+Error in simulation 34 : dataset dd not found for options(datadist=) 
+Error in simulation 35 : dataset dd not found for options(datadist=) 
+Error in simulation 36 : dataset dd not found for options(datadist=) 
+Error in simulation 37 : dataset dd not found for options(datadist=) 
+Error in simulation 38 : dataset dd not found for options(datadist=) 
+Error in simulation 39 : dataset dd not found for options(datadist=) 
+  Simulation 40 of 50 
+Error in simulation 40 : dataset dd not found for options(datadist=) 
+Error in simulation 41 : dataset dd not found for options(datadist=) 
+Error in simulation 42 : dataset dd not found for options(datadist=) 
+Error in simulation 43 : dataset dd not found for options(datadist=) 
+Error in simulation 44 : dataset dd not found for options(datadist=) 
+Error in simulation 45 : dataset dd not found for options(datadist=) 
+Error in simulation 46 : dataset dd not found for options(datadist=) 
+Error in simulation 47 : dataset dd not found for options(datadist=) 
+Error in simulation 48 : dataset dd not found for options(datadist=) 
+Error in simulation 49 : dataset dd not found for options(datadist=) 
+  Simulation 50 of 50 
+Error in simulation 50 : dataset dd not found for options(datadist=) 
+Completed 0 simulations in 0.1 seconds
+
+Running 50 simulations for n = 500 
+Error in simulation 1 : dataset dd not found for options(datadist=) 
+Error in simulation 2 : dataset dd not found for options(datadist=) 
+Error in simulation 3 : dataset dd not found for options(datadist=) 
+Error in simulation 4 : dataset dd not found for options(datadist=) 
+Error in simulation 5 : dataset dd not found for options(datadist=) 
+Error in simulation 6 : dataset dd not found for options(datadist=) 
+Error in simulation 7 : dataset dd not found for options(datadist=) 
+Error in simulation 8 : dataset dd not found for options(datadist=) 
+Error in simulation 9 : dataset dd not found for options(datadist=) 
+  Simulation 10 of 50 
+Error in simulation 10 : dataset dd not found for options(datadist=) 
+Error in simulation 11 : dataset dd not found for options(datadist=) 
+Error in simulation 12 : dataset dd not found for options(datadist=) 
+Error in simulation 13 : dataset dd not found for options(datadist=) 
+Error in simulation 14 : dataset dd not found for options(datadist=) 
+Error in simulation 15 : dataset dd not found for options(datadist=) 
+Error in simulation 16 : dataset dd not found for options(datadist=) 
+Error in simulation 17 : dataset dd not found for options(datadist=) 
+Error in simulation 18 : dataset dd not found for options(datadist=) 
+Error in simulation 19 : dataset dd not found for options(datadist=) 
+  Simulation 20 of 50 
+Error in simulation 20 : dataset dd not found for options(datadist=) 
+Error in simulation 21 : dataset dd not found for options(datadist=) 
+Error in simulation 22 : dataset dd not found for options(datadist=) 
+Error in simulation 23 : dataset dd not found for options(datadist=) 
+Error in simulation 24 : dataset dd not found for options(datadist=) 
+Error in simulation 25 : dataset dd not found for options(datadist=) 
+Error in simulation 26 : dataset dd not found for options(datadist=) 
+Error in simulation 27 : dataset dd not found for options(datadist=) 
+Error in simulation 28 : dataset dd not found for options(datadist=) 
+Error in simulation 29 : dataset dd not found for options(datadist=) 
+  Simulation 30 of 50 
+Error in simulation 30 : dataset dd not found for options(datadist=) 
+Error in simulation 31 : dataset dd not found for options(datadist=) 
+Error in simulation 32 : dataset dd not found for options(datadist=) 
+Error in simulation 33 : dataset dd not found for options(datadist=) 
+Error in simulation 34 : dataset dd not found for options(datadist=) 
+Error in simulation 35 : dataset dd not found for options(datadist=) 
+Error in simulation 36 : dataset dd not found for options(datadist=) 
+Error in simulation 37 : dataset dd not found for options(datadist=) 
+Error in simulation 38 : dataset dd not found for options(datadist=) 
+Error in simulation 39 : dataset dd not found for options(datadist=) 
+  Simulation 40 of 50 
+Error in simulation 40 : dataset dd not found for options(datadist=) 
+Error in simulation 41 : dataset dd not found for options(datadist=) 
+Error in simulation 42 : dataset dd not found for options(datadist=) 
+Error in simulation 43 : dataset dd not found for options(datadist=) 
+Error in simulation 44 : dataset dd not found for options(datadist=) 
+Error in simulation 45 : dataset dd not found for options(datadist=) 
+Error in simulation 46 : dataset dd not found for options(datadist=) 
+Error in simulation 47 : dataset dd not found for options(datadist=) 
+Error in simulation 48 : dataset dd not found for options(datadist=) 
+Error in simulation 49 : dataset dd not found for options(datadist=) 
+  Simulation 50 of 50 
+Error in simulation 50 : dataset dd not found for options(datadist=) 
+Completed 0 simulations in 0.1 seconds
+
+Running 50 simulations for n = 750 
+Error in simulation 1 : dataset dd not found for options(datadist=) 
+Error in simulation 2 : dataset dd not found for options(datadist=) 
+Error in simulation 3 : dataset dd not found for options(datadist=) 
+Error in simulation 4 : dataset dd not found for options(datadist=) 
+Error in simulation 5 : dataset dd not found for options(datadist=) 
+Error in simulation 6 : dataset dd not found for options(datadist=) 
+Error in simulation 7 : dataset dd not found for options(datadist=) 
+Error in simulation 8 : dataset dd not found for options(datadist=) 
+Error in simulation 9 : dataset dd not found for options(datadist=) 
+  Simulation 10 of 50 
+Error in simulation 10 : dataset dd not found for options(datadist=) 
+Error in simulation 11 : dataset dd not found for options(datadist=) 
+Error in simulation 12 : dataset dd not found for options(datadist=) 
+Error in simulation 13 : dataset dd not found for options(datadist=) 
+Error in simulation 14 : dataset dd not found for options(datadist=) 
+Error in simulation 15 : dataset dd not found for options(datadist=) 
+Error in simulation 16 : dataset dd not found for options(datadist=) 
+Error in simulation 17 : dataset dd not found for options(datadist=) 
+Error in simulation 18 : dataset dd not found for options(datadist=) 
+Error in simulation 19 : dataset dd not found for options(datadist=) 
+  Simulation 20 of 50 
+Error in simulation 20 : dataset dd not found for options(datadist=) 
+Error in simulation 21 : dataset dd not found for options(datadist=) 
+Error in simulation 22 : dataset dd not found for options(datadist=) 
+Error in simulation 23 : dataset dd not found for options(datadist=) 
+Error in simulation 24 : dataset dd not found for options(datadist=) 
+Error in simulation 25 : dataset dd not found for options(datadist=) 
+Error in simulation 26 : dataset dd not found for options(datadist=) 
+Error in simulation 27 : dataset dd not found for options(datadist=) 
+Error in simulation 28 : dataset dd not found for options(datadist=) 
+Error in simulation 29 : dataset dd not found for options(datadist=) 
+  Simulation 30 of 50 
+Error in simulation 30 : dataset dd not found for options(datadist=) 
+Error in simulation 31 : dataset dd not found for options(datadist=) 
+Error in simulation 32 : dataset dd not found for options(datadist=) 
+Error in simulation 33 : dataset dd not found for options(datadist=) 
+Error in simulation 34 : dataset dd not found for options(datadist=) 
+Error in simulation 35 : dataset dd not found for options(datadist=) 
+Error in simulation 36 : dataset dd not found for options(datadist=) 
+Error in simulation 37 : dataset dd not found for options(datadist=) 
+Error in simulation 38 : dataset dd not found for options(datadist=) 
+Error in simulation 39 : dataset dd not found for options(datadist=) 
+  Simulation 40 of 50 
+Error in simulation 40 : dataset dd not found for options(datadist=) 
+Error in simulation 41 : dataset dd not found for options(datadist=) 
+Error in simulation 42 : dataset dd not found for options(datadist=) 
+Error in simulation 43 : dataset dd not found for options(datadist=) 
+Error in simulation 44 : dataset dd not found for options(datadist=) 
+Error in simulation 45 : dataset dd not found for options(datadist=) 
+Error in simulation 46 : dataset dd not found for options(datadist=) 
+Error in simulation 47 : dataset dd not found for options(datadist=) 
+Error in simulation 48 : dataset dd not found for options(datadist=) 
+Error in simulation 49 : dataset dd not found for options(datadist=) 
+  Simulation 50 of 50 
+Error in simulation 50 : dataset dd not found for options(datadist=) 
+Completed 0 simulations in 0.1 seconds
+
+Running 50 simulations for n = 1000 
+Error in simulation 1 : dataset dd not found for options(datadist=) 
+Error in simulation 2 : dataset dd not found for options(datadist=) 
+Error in simulation 3 : dataset dd not found for options(datadist=) 
+Error in simulation 4 : dataset dd not found for options(datadist=) 
+Error in simulation 5 : dataset dd not found for options(datadist=) 
+Error in simulation 6 : dataset dd not found for options(datadist=) 
+Error in simulation 7 : dataset dd not found for options(datadist=) 
+Error in simulation 8 : dataset dd not found for options(datadist=) 
+Error in simulation 9 : dataset dd not found for options(datadist=) 
+  Simulation 10 of 50 
+Error in simulation 10 : dataset dd not found for options(datadist=) 
+Error in simulation 11 : dataset dd not found for options(datadist=) 
+Error in simulation 12 : dataset dd not found for options(datadist=) 
+Error in simulation 13 : dataset dd not found for options(datadist=) 
+Error in simulation 14 : dataset dd not found for options(datadist=) 
+Error in simulation 15 : dataset dd not found for options(datadist=) 
+Error in simulation 16 : dataset dd not found for options(datadist=) 
+Error in simulation 17 : dataset dd not found for options(datadist=) 
+Error in simulation 18 : dataset dd not found for options(datadist=) 
+Error in simulation 19 : dataset dd not found for options(datadist=) 
+  Simulation 20 of 50 
+Error in simulation 20 : dataset dd not found for options(datadist=) 
+Error in simulation 21 : dataset dd not found for options(datadist=) 
+Error in simulation 22 : dataset dd not found for options(datadist=) 
+Error in simulation 23 : dataset dd not found for options(datadist=) 
+Error in simulation 24 : dataset dd not found for options(datadist=) 
+Error in simulation 25 : dataset dd not found for options(datadist=) 
+Error in simulation 26 : dataset dd not found for options(datadist=) 
+Error in simulation 27 : dataset dd not found for options(datadist=) 
+Error in simulation 28 : dataset dd not found for options(datadist=) 
+Error in simulation 29 : dataset dd not found for options(datadist=) 
+  Simulation 30 of 50 
+Error in simulation 30 : dataset dd not found for options(datadist=) 
+Error in simulation 31 : dataset dd not found for options(datadist=) 
+Error in simulation 32 : dataset dd not found for options(datadist=) 
+Error in simulation 33 : dataset dd not found for options(datadist=) 
+Error in simulation 34 : dataset dd not found for options(datadist=) 
+Error in simulation 35 : dataset dd not found for options(datadist=) 
+Error in simulation 36 : dataset dd not found for options(datadist=) 
+Error in simulation 37 : dataset dd not found for options(datadist=) 
+Error in simulation 38 : dataset dd not found for options(datadist=) 
+Error in simulation 39 : dataset dd not found for options(datadist=) 
+  Simulation 40 of 50 
+Error in simulation 40 : dataset dd not found for options(datadist=) 
+Error in simulation 41 : dataset dd not found for options(datadist=) 
+Error in simulation 42 : dataset dd not found for options(datadist=) 
+Error in simulation 43 : dataset dd not found for options(datadist=) 
+Error in simulation 44 : dataset dd not found for options(datadist=) 
+Error in simulation 45 : dataset dd not found for options(datadist=) 
+Error in simulation 46 : dataset dd not found for options(datadist=) 
+Error in simulation 47 : dataset dd not found for options(datadist=) 
+Error in simulation 48 : dataset dd not found for options(datadist=) 
+Error in simulation 49 : dataset dd not found for options(datadist=) 
+  Simulation 50 of 50 
+Error in simulation 50 : dataset dd not found for options(datadist=) 
+Completed 0 simulations in 0.1 seconds
+
+Running 50 simulations for n = 1500 
+Error in simulation 1 : dataset dd not found for options(datadist=) 
+Error in simulation 2 : dataset dd not found for options(datadist=) 
+Error in simulation 3 : dataset dd not found for options(datadist=) 
+Error in simulation 4 : dataset dd not found for options(datadist=) 
+Error in simulation 5 : dataset dd not found for options(datadist=) 
+Error in simulation 6 : dataset dd not found for options(datadist=) 
+Error in simulation 7 : dataset dd not found for options(datadist=) 
+Error in simulation 8 : dataset dd not found for options(datadist=) 
+Error in simulation 9 : dataset dd not found for options(datadist=) 
+  Simulation 10 of 50 
+Error in simulation 10 : dataset dd not found for options(datadist=) 
+Error in simulation 11 : dataset dd not found for options(datadist=) 
+Error in simulation 12 : dataset dd not found for options(datadist=) 
+Error in simulation 13 : dataset dd not found for options(datadist=) 
+Error in simulation 14 : dataset dd not found for options(datadist=) 
+Error in simulation 15 : dataset dd not found for options(datadist=) 
+Error in simulation 16 : dataset dd not found for options(datadist=) 
+Error in simulation 17 : dataset dd not found for options(datadist=) 
+Error in simulation 18 : dataset dd not found for options(datadist=) 
+Error in simulation 19 : dataset dd not found for options(datadist=) 
+  Simulation 20 of 50 
+Error in simulation 20 : dataset dd not found for options(datadist=) 
+Error in simulation 21 : dataset dd not found for options(datadist=) 
+Error in simulation 22 : dataset dd not found for options(datadist=) 
+Error in simulation 23 : dataset dd not found for options(datadist=) 
+Error in simulation 24 : dataset dd not found for options(datadist=) 
+Error in simulation 25 : dataset dd not found for options(datadist=) 
+Error in simulation 26 : dataset dd not found for options(datadist=) 
+Error in simulation 27 : dataset dd not found for options(datadist=) 
+Error in simulation 28 : dataset dd not found for options(datadist=) 
+Error in simulation 29 : dataset dd not found for options(datadist=) 
+  Simulation 30 of 50 
+Error in simulation 30 : dataset dd not found for options(datadist=) 
+Error in simulation 31 : dataset dd not found for options(datadist=) 
+Error in simulation 32 : dataset dd not found for options(datadist=) 
+Error in simulation 33 : dataset dd not found for options(datadist=) 
+Error in simulation 34 : dataset dd not found for options(datadist=) 
+Error in simulation 35 : dataset dd not found for options(datadist=) 
+Error in simulation 36 : dataset dd not found for options(datadist=) 
+Error in simulation 37 : dataset dd not found for options(datadist=) 
+Error in simulation 38 : dataset dd not found for options(datadist=) 
+Error in simulation 39 : dataset dd not found for options(datadist=) 
+  Simulation 40 of 50 
+Error in simulation 40 : dataset dd not found for options(datadist=) 
+Error in simulation 41 : dataset dd not found for options(datadist=) 
+Error in simulation 42 : dataset dd not found for options(datadist=) 
+Error in simulation 43 : dataset dd not found for options(datadist=) 
+Error in simulation 44 : dataset dd not found for options(datadist=) 
+Error in simulation 45 : dataset dd not found for options(datadist=) 
+Error in simulation 46 : dataset dd not found for options(datadist=) 
+Error in simulation 47 : dataset dd not found for options(datadist=) 
+Error in simulation 48 : dataset dd not found for options(datadist=) 
+Error in simulation 49 : dataset dd not found for options(datadist=) 
+  Simulation 50 of 50 
+Error in simulation 50 : dataset dd not found for options(datadist=) 
+Completed 0 simulations in 0.2 seconds
+
+Running 50 simulations for n = 2000 
+Error in simulation 1 : dataset dd not found for options(datadist=) 
+Error in simulation 2 : dataset dd not found for options(datadist=) 
+Error in simulation 3 : dataset dd not found for options(datadist=) 
+Error in simulation 4 : dataset dd not found for options(datadist=) 
+Error in simulation 5 : dataset dd not found for options(datadist=) 
+Error in simulation 6 : dataset dd not found for options(datadist=) 
+Error in simulation 7 : dataset dd not found for options(datadist=) 
+Error in simulation 8 : dataset dd not found for options(datadist=) 
+Error in simulation 9 : dataset dd not found for options(datadist=) 
+  Simulation 10 of 50 
+Error in simulation 10 : dataset dd not found for options(datadist=) 
+Error in simulation 11 : dataset dd not found for options(datadist=) 
+Error in simulation 12 : dataset dd not found for options(datadist=) 
+Error in simulation 13 : dataset dd not found for options(datadist=) 
+Error in simulation 14 : dataset dd not found for options(datadist=) 
+Error in simulation 15 : dataset dd not found for options(datadist=) 
+Error in simulation 16 : dataset dd not found for options(datadist=) 
+Error in simulation 17 : dataset dd not found for options(datadist=) 
+Error in simulation 18 : dataset dd not found for options(datadist=) 
+Error in simulation 19 : dataset dd not found for options(datadist=) 
+  Simulation 20 of 50 
+Error in simulation 20 : dataset dd not found for options(datadist=) 
+Error in simulation 21 : dataset dd not found for options(datadist=) 
+Error in simulation 22 : dataset dd not found for options(datadist=) 
+Error in simulation 23 : dataset dd not found for options(datadist=) 
+Error in simulation 24 : dataset dd not found for options(datadist=) 
+Error in simulation 25 : dataset dd not found for options(datadist=) 
+Error in simulation 26 : dataset dd not found for options(datadist=) 
+Error in simulation 27 : dataset dd not found for options(datadist=) 
+Error in simulation 28 : dataset dd not found for options(datadist=) 
+Error in simulation 29 : dataset dd not found for options(datadist=) 
+  Simulation 30 of 50 
+Error in simulation 30 : dataset dd not found for options(datadist=) 
+Error in simulation 31 : dataset dd not found for options(datadist=) 
+Error in simulation 32 : dataset dd not found for options(datadist=) 
+Error in simulation 33 : dataset dd not found for options(datadist=) 
+Error in simulation 34 : dataset dd not found for options(datadist=) 
+Error in simulation 35 : dataset dd not found for options(datadist=) 
+Error in simulation 36 : dataset dd not found for options(datadist=) 
+Error in simulation 37 : dataset dd not found for options(datadist=) 
+Error in simulation 38 : dataset dd not found for options(datadist=) 
+Error in simulation 39 : dataset dd not found for options(datadist=) 
+  Simulation 40 of 50 
+Error in simulation 40 : dataset dd not found for options(datadist=) 
+Error in simulation 41 : dataset dd not found for options(datadist=) 
+Error in simulation 42 : dataset dd not found for options(datadist=) 
+Error in simulation 43 : dataset dd not found for options(datadist=) 
+Error in simulation 44 : dataset dd not found for options(datadist=) 
+Error in simulation 45 : dataset dd not found for options(datadist=) 
+Error in simulation 46 : dataset dd not found for options(datadist=) 
+Error in simulation 47 : dataset dd not found for options(datadist=) 
+Error in simulation 48 : dataset dd not found for options(datadist=) 
+Error in simulation 49 : dataset dd not found for options(datadist=) 
+  Simulation 50 of 50 
+Error in simulation 50 : dataset dd not found for options(datadist=) 
+Completed 0 simulations in 0.2 seconds</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(all_results) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"n_"</span>, sample_sizes)</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>combined_results <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, all_results)</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>main_plot <span class="ot">&lt;-</span> <span class="fu">create_sample_size_boxplot</span>(combined_results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+ℹ Please use `linewidth` instead.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(main_plot)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: No shared levels found between `names(values)` of the manual scale and the
+data's fill values.</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>total_runtime <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">as.numeric</span>(<span class="fu">Sys.time</span>() <span class="sc">-</span> total_start_time, <span class="at">units =</span> <span class="st">"mins"</span>), <span class="dv">1</span>)</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Total runtime:"</span>, total_runtime, <span class="st">"minutes</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Total runtime: 0 minutes</code></pre>
+</div>
+</div>
 
 
 </section>
