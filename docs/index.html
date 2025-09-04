@@ -7,9 +7,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Ashley Dickson">
-<meta name="dcterms.date" content="2025-06-08">
 
-<title>Explorations in Binary Data – Modelling Binary Outcomes</title>
+<title>Sample Size Calculations – Modelling Binary Outcomes</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -103,6 +102,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -145,6 +173,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
    
   <ul>
   <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
+  <li><a href="#sample-size-requirements" id="toc-sample-size-requirements" class="nav-link" data-scroll-target="#sample-size-requirements">Sample Size Requirements</a></li>
+  <li><a href="#simulation-data" id="toc-simulation-data" class="nav-link" data-scroll-target="#simulation-data">Simulation Data</a>
+  <ul class="collapse">
+  <li><a href="#finding-alpha" id="toc-finding-alpha" class="nav-link" data-scroll-target="#finding-alpha">Finding <span class="math inline">\(\alpha\)</span></a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -153,7 +186,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Explorations in Binary Data</h1>
+<h1 class="title">Sample Size Calculations</h1>
 </div>
 
 
@@ -167,12 +200,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           </div>
   </div>
     
-    <div>
-    <div class="quarto-title-meta-heading">Published</div>
-    <div class="quarto-title-meta-contents">
-      <p class="date">June 8, 2025</p>
-    </div>
-  </div>
   
     
   </div>
@@ -182,203 +209,270 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<section id="introduction" class="level1">
-<h1>Introduction</h1>
-<p>
-Here I focus on model validation to answer the question of whether internal validation can be a decent proxy for external validation.
-</p>
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
+<p>In this document, I simulate an approach to clinical risk prediction modelling that begins with sample size requirements, assumes a simple model, and then proceeds to assess options for internal validity. I begin with sample size requirements.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rms)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pROC)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pmsampsize) <span class="co"># Riley et al.</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(samplesizedev) <span class="co"># Menelaos et al.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>In this version, I define a set of basic functions that generate data, get the calibration slope from a model, run a single simulation and then a wider set of simulations, and then create the internal-external boxplot.</p>
+</section>
+<section id="sample-size-requirements" class="level2">
+<h2 class="anchored" data-anchor-id="sample-size-requirements">Sample Size Requirements</h2>
+<p>Here I consider two methods of deriving sample size requirements, respectively from Riley et al.&nbsp;(2020), and Pavlou et al.&nbsp;(2024). For each method of deriving sample size requirements, we need to supply the number of predictor parameters in the anticipated model, the overall prevalence of the outcome and the target discriminative skill or calibration level.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">112358</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>params <span class="ot">&lt;-</span> <span class="dv">10</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>prev <span class="ot">&lt;-</span> <span class="fl">0.015</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>c_stat <span class="ot">&lt;-</span> <span class="fl">0.85</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>calib <span class="ot">&lt;-</span> <span class="fl">0.9</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Initial function to generate simulation data; to be used twice, for internal and external validation.</p>
+<p>We can start by getting Riley et al.’s recommendations on sample size given these parameters:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>gen_data <span class="ot">&lt;-</span> <span class="cf">function</span>(n, <span class="at">n_preds =</span> <span class="dv">10</span>, <span class="at">intercept =</span> <span class="sc">-</span><span class="fl">1.5</span>, <span class="at">coef_value =</span> <span class="fl">0.7</span>) {</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  X <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">rnorm</span>(n <span class="sc">*</span> n_preds), <span class="at">nrow =</span> n, <span class="at">ncol =</span> n_preds)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(X) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"x"</span>, <span class="dv">1</span><span class="sc">:</span>n_preds)</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> intercept <span class="sc">+</span> X <span class="sc">%*%</span> <span class="fu">rep</span>(coef_value, n_preds)</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  prob <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span>(<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span>eta))</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, prob)</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">data.frame</span>(<span class="at">y =</span> y, <span class="at">prob =</span> prob, X))</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>pm_samp <span class="ot">&lt;-</span> <span class="fu">pmsampsize</span>(<span class="at">type =</span> <span class="st">"b"</span>,</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>                     <span class="at">cstatistic =</span> c_stat,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>                     <span class="at">parameters =</span> params,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>                     <span class="at">prevalence =</span> prev)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Function to return key validation metric: calibration slope</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>get_cal_slope <span class="ot">&lt;-</span> <span class="cf">function</span>(model, newdata) {</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  lp <span class="ot">&lt;-</span> <span class="fu">predict</span>(model, <span class="at">newdata =</span> newdata) <span class="co">#lp = linear predictor from rms</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  cal_mod <span class="ot">&lt;-</span> <span class="fu">glm</span>(y <span class="sc">~</span> lp, <span class="at">data =</span> newdata, <span class="at">family =</span> binomial)</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(cal_mod<span class="sc">$</span>coef[<span class="dv">2</span>])</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Function to create core simulation for a single simulation (couldn’t get parallel processing working)</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>single_simulation <span class="ot">&lt;-</span> <span class="cf">function</span>(sim_id, n_train, n_ext, n_boot) {</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  train_data <span class="ot">&lt;-</span> <span class="fu">gen_data</span>(n_train, <span class="at">n_preds =</span> <span class="dv">10</span>, <span class="at">intercept =</span> <span class="sc">-</span><span class="fl">1.5</span>, <span class="at">coef_value =</span> <span class="fl">0.7</span>)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  ext_data <span class="ot">&lt;-</span> <span class="fu">gen_data</span>(n_ext, <span class="at">n_preds =</span> <span class="dv">10</span>, <span class="at">intercept =</span> <span class="sc">-</span><span class="fl">1.5</span>, <span class="at">coef_value =</span> <span class="fl">0.7</span>)</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  dd <span class="ot">&lt;-</span> <span class="fu">datadist</span>(train_data)</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">options</span>(<span class="at">datadist =</span> dd)</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">on.exit</span>(<span class="fu">options</span>(<span class="at">datadist =</span> <span class="cn">NULL</span>))</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  model_fn <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="st">"y ~"</span>, <span class="fu">paste</span>(<span class="fu">paste0</span>(<span class="st">"x"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>), <span class="at">collapse =</span> <span class="st">" + "</span>))</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  model <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(<span class="fu">suppressWarnings</span>(</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">lrm</span>(<span class="fu">as.formula</span>(model_fn), <span class="at">data =</span> train_data, <span class="at">x =</span> <span class="cn">TRUE</span>, <span class="at">y =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  ))</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  ext_cal_slope <span class="ot">&lt;-</span> <span class="fu">get_cal_slope</span>(model, ext_data)</span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  boot_val <span class="ot">&lt;-</span> <span class="fu">validate</span>(model, <span class="at">method =</span> <span class="st">"boot"</span>, <span class="at">B =</span> n_boot)</span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  boot_cal_slope <span class="ot">&lt;-</span> boot_val[<span class="st">"Slope"</span>, <span class="st">"index.corrected"</span>]</span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">data.frame</span>(<span class="at">sim =</span> sim_id, <span class="at">n_train =</span> n_train, </span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>             <span class="at">ext_cal_slope =</span> ext_cal_slope,</span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>             <span class="at">boot_cal_slope =</span> boot_cal_slope))</span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Main function to call simulations setting errors to NA then filtering out.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>run_simulation <span class="ot">&lt;-</span> <span class="cf">function</span>(n_train, n_ext, <span class="at">n_sims =</span> <span class="dv">50</span>, <span class="at">n_boot =</span> <span class="dv">200</span>) {</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  results <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">"list"</span>, n_sims)</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  start_time <span class="ot">&lt;-</span> <span class="fu">Sys.time</span>()</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n_sims) {</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    results[[i]] <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>({</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">single_simulation</span>(i, n_train, n_ext, n_boot)</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    }, <span class="at">error =</span> <span class="cf">function</span>(e) {</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>      <span class="fu">data.frame</span>(<span class="at">sim =</span> i, <span class="at">n_train =</span> n_train, <span class="at">ext_cal_slope =</span> <span class="cn">NA</span>, <span class="at">boot_cal_slope =</span> <span class="cn">NA</span>)</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    })</span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  all_results <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, results)</span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  all_results <span class="ot">&lt;-</span> all_results[<span class="sc">!</span><span class="fu">is.na</span>(all_results<span class="sc">$</span>ext_cal_slope), ]</span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Sample size n ="</span>, n_train, <span class="st">"completed in"</span>, </span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>      <span class="fu">round</span>(<span class="fu">as.numeric</span>(<span class="fu">Sys.time</span>() <span class="sc">-</span> start_time, <span class="at">units =</span> <span class="st">"secs"</span>), <span class="dv">1</span>), <span class="st">"seconds</span><span class="sc">\n\n</span><span class="st">"</span>)</span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(all_results)</span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Now let’s run the simulation:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>total_start_time <span class="ot">&lt;-</span> <span class="fu">Sys.time</span>()</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>sample_sizes <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">50</span>, <span class="dv">100</span>, <span class="dv">200</span>, <span class="dv">300</span>, <span class="dv">500</span>, <span class="dv">750</span>, <span class="dv">1000</span>, <span class="dv">2000</span>)</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>all_results <span class="ot">&lt;-</span> <span class="fu">lapply</span>(sample_sizes, <span class="cf">function</span>(n) <span class="fu">run_simulation</span>(n, n))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>optimization did not converge for lrm.fit
-singular Hessian matrix
-convergence code 2
-optimization did not converge for lrm.fit
-singular Hessian matrix
-convergence code 2
-optimization did not converge for lrm.fit
-singular Hessian matrix
-convergence code 2
-optimization did not converge for lrm.fit
-singular Hessian matrix
-convergence code 2
-optimization did not converge for lrm.fit
-singular Hessian matrix
-convergence code 2
-optimization did not converge for lrm.fit
-singular Hessian matrix
-convergence code 2
-optimization did not converge for lrm.fit
-singular Hessian matrix
-convergence code 2
-optimization did not converge for lrm.fit
-singular Hessian matrix
-convergence code 2
-optimization did not converge for lrm.fit
-singular Hessian matrix
-convergence code 2</code></pre>
-</div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>pm_samp<span class="sc">$</span>results_table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Sample size n = 50 completed in 18.5 seconds</code></pre>
+<pre><code>           Samp_size Shrinkage Parameter CS_Rsq Max_Rsq Nag_Rsq  EPP
+Criteria 1      2960     0.900        10 0.0299   0.144   0.207 4.44
+Criteria 2      1361     0.806        10 0.0299   0.144   0.207 2.04
+Criteria 3        23     0.900        10 0.0299   0.144   0.207 0.03
+Final           2960     0.900        10 0.0299   0.144   0.207 4.44</code></pre>
 </div>
-<div class="cell-output cell-output-stderr">
-<pre><code>optimization did not converge for lrm.fit
-singular Hessian matrix
-convergence code 2
-optimization did not converge for lrm.fit
-singular Hessian matrix
-convergence code 2
-optimization did not converge for lrm.fit
-singular Hessian matrix
-convergence code 2</code></pre>
 </div>
+<p>Riley’s recommendation in this scenario is 379, but we know from Pavlou (2024) that this is likely to be inadequate at this relatively high model strength. This paper recommends an increase of 50% in minimum sample size fo achieve a C-statistic of 0.85, and double the size for C=0.9.</p>
+<p>(Parenthetically, Riley recommended a higher sample size of 547 at the lower C-statistic of 0.8. It would be good to understand why a smaller sample would be required for better discrimination. Pavlou et al.&nbsp;conclude that the Riley formula performs relatively well at lower strengths.)</p>
+<p>Let’s retrieve the recommendation from Pavlou et al.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>mp_samp <span class="ot">&lt;-</span> <span class="fu">samplesizedev</span>(<span class="at">outcome =</span> <span class="st">"Binary"</span>,</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>                        <span class="at">S =</span> <span class="fl">0.9</span>,      <span class="co"># calibration slope</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>                        <span class="at">phi =</span> prev,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>                        <span class="at">c =</span> c_stat,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>                        <span class="at">p =</span> params)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Sample size n = 100 completed in 16.7 seconds
-
-Sample size n = 200 completed in 18.8 seconds
-
-Sample size n = 300 completed in 21.3 seconds
-
-Sample size n = 500 completed in 27.1 seconds
-
-Sample size n = 750 completed in 33.5 seconds
-
-Sample size n = 1000 completed in 40.2 seconds
-
-Sample size n = 2000 completed in 66.8 seconds</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(all_results) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"n_"</span>, sample_sizes)</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>combined_results <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, all_results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>A function to create the boxplot: sample sizes on x-axis and CS on y-axis; 2 series.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>gen_boxplot <span class="ot">&lt;-</span> <span class="cf">function</span>(all_results) {</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  plot_data <span class="ot">&lt;-</span> all_results <span class="sc">%&gt;%</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(sim, n_train, ext_cal_slope, boot_cal_slope) <span class="sc">%&gt;%</span></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">c</span>(ext_cal_slope, boot_cal_slope),</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>                 <span class="at">names_to =</span> <span class="st">"validation_type"</span>, <span class="at">values_to =</span> <span class="st">"cal_slope"</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">validation_type =</span> <span class="fu">case_when</span>(</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>      validation_type <span class="sc">==</span> <span class="st">"ext_cal_slope"</span> <span class="sc">~</span> <span class="st">"External Validation"</span>,</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>      validation_type <span class="sc">==</span> <span class="st">"boot_cal_slope"</span> <span class="sc">~</span> <span class="st">"Bootstrap Internal Validation"</span>),</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">n_train =</span> <span class="fu">factor</span>(n_train)) <span class="sc">%&gt;%</span></span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(cal_slope))</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(plot_data, <span class="fu">aes</span>(<span class="at">x =</span> n_train, <span class="at">y =</span> cal_slope, <span class="at">fill =</span> validation_type)) <span class="sc">+</span></span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_boxplot</span>(<span class="at">alpha =</span> <span class="fl">0.7</span>, <span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="fl">0.8</span>)) <span class="sc">+</span></span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"External Validation"</span> <span class="ot">=</span> <span class="st">"lightblue"</span>, </span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>                                <span class="st">"Bootstrap Internal Validation"</span> <span class="ot">=</span> <span class="st">"lightcoral"</span>)) <span class="sc">+</span></span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Calibration Slope by Sample Size"</span>,</span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>         <span class="at">x =</span> <span class="st">"Sample Size"</span>, <span class="at">y =</span> <span class="st">"Calibration Slope"</span>, <span class="at">fill =</span> <span class="st">"Validation Type"</span>) <span class="sc">+</span></span>
-<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_y_continuous</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">1.5</span>)) <span class="sc">+</span></span>
-<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>, <span class="at">size =</span> <span class="dv">14</span>, <span class="at">face =</span> <span class="st">"bold"</span>),</span>
-<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>          <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>, <span class="at">size =</span> <span class="dv">11</span>),</span>
-<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>          <span class="at">legend.position =</span> <span class="st">"bottom"</span>)</span>
-<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>main_plot <span class="ot">&lt;-</span> <span class="fu">gen_boxplot</span>(combined_results)</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(main_plot)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 4 rows containing non-finite outside the scale range
-(`stat_boxplot()`).</code></pre>
+<pre><code>[1] "Optimisation Starting, ~ 1 min left..."</code></pre>
 </div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="index_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="index_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>total_runtime <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">as.numeric</span>(<span class="fu">Sys.time</span>() <span class="sc">-</span> total_start_time, <span class="at">units =</span> <span class="st">"mins"</span>), <span class="dv">1</span>)</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Total runtime:"</span>, total_runtime, <span class="st">"minutes"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-5-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-5-3.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-5-4.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-5-5.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-5-6.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>mp_samp<span class="sc">$</span>sim</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Total runtime: 4.1 minutes</code></pre>
+<pre><code>[1] 3171</code></pre>
+</div>
+</div>
+<p>The simulation here recommends a minimum sample size of 613 patients. At 15% prevalence this represents 92 events, and at 10 parameters is 9.2 EPP. This represents an increase of 61.6% in EPP compared with Riley.</p>
+<p>Pavlou et al.&nbsp;provide expected performance statistics for the model given this set-up.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">expected_performance</span>(<span class="at">outcome =</span> <span class="st">"Binary"</span>, <span class="at">n =</span> <span class="dv">3171</span>, <span class="at">phi =</span> <span class="fl">0.015</span>, <span class="at">c =</span> <span class="fl">0.85</span>, <span class="at">p =</span> <span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                                 [,1]
+n                           3171.0000
+True prevalence                0.0200
+True c-statistic               0.8500
+Number of predictors          10.0000
+---------------------------    0.0000
+Mean_calibration_slope         0.8990
+SD(CS)                         0.1050
+Pr(0.85&lt;CS&lt;1.15)               0.6600
+Mean_MAPE                      0.0055
+SD(MAPE)                       0.0012
+Optimism_R2_Nag                0.0150
+Mean_AUC                       0.8400
+SD(AUC)                        0.0193
+SD(Average Predicted Risk)     0.0020
+Median CS                      0.8880</code></pre>
+</div>
+</div>
+<p>Hence we can expected to see a calibration slope of 0.901 from our model. This will help guide our assessment of internal validation.</p>
+</section>
+<section id="simulation-data" class="level2">
+<h2 class="anchored" data-anchor-id="simulation-data">Simulation Data</h2>
+<p>Let’s now generate some simulation data with a target prevalence of 1.5%, since this forms part of the sample size criteria above. To achieve 1.5% prevalence, we need:</p>
+<p><span class="math display">\[
+Pr(Y=1) = 0.015
+\]</span></p>
+<p>This is the marginal probability rather than the conditional on <span class="math inline">\(X\)</span>. Another way to express this is that the expectation of the dependent variable, <span class="math inline">\(Y\)</span>, should be 0.15:</p>
+<p><span class="math display">\[
+\mathbb{E}[Y] = 0.015
+\]</span></p>
+<p>We know that the dependent variable Y takes on values from the conditional distribution:</p>
+<p><span class="math display">\[
+Y|X \sim Bernoulli (p),
+\]</span></p>
+<p>where <span class="math inline">\(p\)</span> is the conditional probability of success, <span class="math inline">\(p=Pr(Y=1 | X)\)</span>. From the definition of the logit transformation,</p>
+<p><span class="math display">\[
+log(\frac{p}{1-p}) = \alpha + \beta X
+\]</span></p>
+<p>we find p as the inverse-logit of the linear predictors</p>
+<p><span class="math display">\[
+p = logit^{-1} (\alpha + \beta X) = \frac{1}{1+e^{-(\alpha + \beta X)}},
+\]</span></p>
+<p>which we know is equal to the conditional expectation <span class="math inline">\(\mathbb{E}[Y|X]\)</span>. Since <span class="math inline">\(Pr(Y=1)=\mathbb{E}[Y]\)</span>, which in turn are equal to the expectation of the conditional probability of success, <span class="math inline">\(\mathbb{E} [Pr(Y=1 | X)]\)</span>, we can substitute the logit model to find:</p>
+<p><span class="math display">\[
+\mathbb{E} [ \frac{1}{1+e^{-(\alpha + \beta X)}} ] = 0.015,
+\]</span></p>
+<p>where <span class="math inline">\(\beta\)</span> is a vector of coefficients and <span class="math inline">\(X\)</span> is a vector of predictor values.</p>
+<p>Once we have chosen our values for <span class="math inline">\(\beta\)</span>, we need to solve for <span class="math inline">\(\alpha\)</span> to find the value which guarantees the required level of prevalence, which we have chosen as 1.5%.</p>
+<section id="finding-alpha" class="level3">
+<h3 class="anchored" data-anchor-id="finding-alpha">Finding <span class="math inline">\(\alpha\)</span></h3>
+<p>In a sample setting, we do not have an analytic distribution over which to take an expectation, so instead we can take a simple average, as</p>
+<p><span class="math display">\[
+\frac{1}{n} \sum_{i=1}^{n} (\frac{1}{1+e^{-(\alpha + \beta X)}}) = 0.015.
+\]</span></p>
+<p>For the sake of simplicity let’s choose 10 continuous predictors drawn from the standard normal distribution, <span class="math inline">\(X_j \sim \mathcal{N} (0, 1)\)</span>. We’ll start with Pavlou et al.’s recommendation on sample size.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">3171</span>          <span class="co"># sample size (Pavlou's suggestion)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Next we generate the predictors.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">replicate</span>(params, <span class="fu">rnorm</span>(n))      <span class="co"># 613*10 matrix</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(X) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"x"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Set the beta coefficients including some zeroes.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>beta <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">1.1</span>, <span class="fl">0.8</span>, <span class="fl">0.6</span>, <span class="fl">0.4</span>, <span class="fl">0.7</span>, <span class="fl">0.7</span>, <span class="fl">0.7</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="fl">0.1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Solve for alpha so that logit(<span class="math inline">\(\eta\)</span>)) = prev. Technically, in R we’re solving the following for <span class="math inline">\(\alpha\)</span>:</p>
+<p><span class="math display">\[
+\frac{1}{n} \sum_{i=1}^{n} (\frac{1}{1 + e^{\alpha + \beta X}}) - 0.015 = 0
+\]</span></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>inv_logit <span class="ot">&lt;-</span> <span class="cf">function</span>(z) <span class="dv">1</span><span class="sc">/</span>(<span class="dv">1</span><span class="sc">+</span><span class="fu">exp</span>(<span class="sc">-</span>z))</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>find_alpha  <span class="ot">&lt;-</span> <span class="cf">function</span>(a) <span class="fu">mean</span>(<span class="fu">inv_logit</span>(a <span class="sc">+</span> <span class="fu">as.vector</span>(X <span class="sc">%*%</span> beta))) <span class="sc">-</span> prev</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>alpha    <span class="ot">&lt;-</span> <span class="fu">uniroot</span>(find_alpha, <span class="fu">c</span>(<span class="sc">-</span><span class="dv">10</span>, <span class="dv">10</span>))<span class="sc">$</span>root</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(alpha)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] -5.888</code></pre>
+</div>
+</div>
+<p>With <span class="math inline">\(\alpha = -2.7\)</span> in hand, we can now generate probabilities and outcomes:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>pi <span class="ot">&lt;-</span> <span class="fu">inv_logit</span>(alpha <span class="sc">+</span> <span class="fu">as.vector</span>(X <span class="sc">%*%</span> beta)) </span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, pi)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(y)<span class="sc">/</span><span class="fu">length</span>(y)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.01545</code></pre>
+</div>
+</div>
+<p>Fit logistic model and report simple diagnostics</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(X)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>dat<span class="sc">$</span>y <span class="ot">&lt;-</span> y </span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>m <span class="ot">&lt;-</span> <span class="fu">glm</span>(y <span class="sc">~</span> ., <span class="at">data =</span> dat, <span class="at">family =</span> <span class="fu">binomial</span>())</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>m</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:  glm(formula = y ~ ., family = binomial(), data = dat)
+
+Coefficients:
+(Intercept)           x1           x2           x3           x4           x5  
+    -6.2045       0.9835       0.8201       0.6158       0.2720       0.9978  
+         x6           x7           x8           x9          x10  
+     0.8996       0.8114      -0.3786      -0.0842       0.1769  
+
+Degrees of Freedom: 3170 Total (i.e. Null);  3160 Residual
+Null Deviance:      506 
+Residual Deviance: 340  AIC: 362</code></pre>
+</div>
+</div>
+<p>Apparent calibration slope</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>lp <span class="ot">&lt;-</span> <span class="fu">predict</span>(m, <span class="at">type =</span> <span class="st">"link"</span>) </span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>cal_slope <span class="ot">&lt;-</span> <span class="fu">coef</span>(<span class="fu">glm</span>(y <span class="sc">~</span> lp, <span class="at">data =</span> dat, <span class="at">family =</span> <span class="fu">binomial</span>()))</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>cal_slope</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   (Intercept)             lp 
+-0.00000004747  0.99999997038 </code></pre>
+</div>
+</div>
+<p>AUC</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pROC)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Type 'citation("pROC")' for a citation.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'pROC'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:stats':
+
+    cov, smooth, var</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>auc_val <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">auc</span>(<span class="fu">roc</span>(y, <span class="fu">predict</span>(m, <span class="at">type=</span><span class="st">"response"</span>), <span class="at">quiet=</span><span class="cn">TRUE</span>)))</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="fu">list</span>(<span class="at">realized_prevalence =</span> <span class="fu">mean</span>(y), <span class="at">alpha =</span> alpha, <span class="at">calibration_slope_app =</span> cal_slope , <span class="at">AUC_app =</span> auc_val )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$realized_prevalence
+[1] 0.01545
+
+$alpha
+[1] -5.888
+
+$calibration_slope_app
+   (Intercept)             lp 
+-0.00000004747  0.99999997038 
+
+$AUC_app
+[1] 0.9091</code></pre>
 </div>
 </div>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->

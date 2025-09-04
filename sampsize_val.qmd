@@ -1,5 +1,5 @@
 ---
-title: "Sample Size Calculations"
+title: "Sample Size Calculations & Model Validation"
 author: "Ashley Dickson"
 editor: visual
 ---
@@ -19,7 +19,7 @@ Here I consider two methods of deriving sample size requirements, respectively f
 
 ```{r}
 params <- 10
-prev <- 0.015
+prev <- 0.15
 c_stat <- 0.85
 calib <- 0.9
 ```
@@ -60,23 +60,23 @@ The simulation here recommends a minimum sample size of 613 patients. At 15% pre
 Pavlou et al. provide expected performance statistics for the model given this set-up.
 
 ```{r}
-expected_performance(outcome = "Binary", n = 3171, phi = 0.015, c = 0.85, p = 10)
+expected_performance(outcome = "Binary", n = 613, phi = 0.15, c = 0.85, p = 10)
 ```
 
 Hence we can expected to see a calibration slope of 0.901 from our model. This will help guide our assessment of internal validation.
 
 ## Simulation Data
 
-Let's now generate some simulation data with a target prevalence of 1.5%, since this forms part of the sample size criteria above. To achieve 1.5% prevalence, we need:
+Let's now generate some simulation data with a target prevalence of 15%, since this forms part of the sample size criteria above. To achieve 15% prevalence, we need:
 
 $$
-Pr(Y=1) = 0.015
+Pr(Y=1) = 0.15
 $$
 
 This is the marginal probability rather than the conditional on $X$. Another way to express this is that the expectation of the dependent variable, $Y$, should be 0.15:
 
 $$
-\mathbb{E}[Y] = 0.015
+\mathbb{E}[Y] = 0.15
 $$
 
 We know that the dependent variable Y takes on values from the conditional distribution:
@@ -100,32 +100,32 @@ $$
 which we know is equal to the conditional expectation $\mathbb{E}[Y|X]$. Since $Pr(Y=1)=\mathbb{E}[Y]$, which in turn are equal to the expectation of the conditional probability of success, $\mathbb{E} [Pr(Y=1 | X)]$, we can substitute the logit model to find:
 
 $$
-\mathbb{E} [ \frac{1}{1+e^{-(\alpha + \beta X)}} ] = 0.015,
+\mathbb{E} [ \frac{1}{1+e^{-(\alpha + \beta X)}} ] = 0.15,
 $$
 
 where $\beta$ is a vector of coefficients and $X$ is a vector of predictor values.
 
-Once we have chosen our values for $\beta$, we need to solve for $\alpha$ to find the value which guarantees the required level of prevalence, which we have chosen as 1.5%.
+Once we have chosen our values for $\beta$, we need to solve for $\alpha$ to find the value which guarantees the required level of prevalence, which we have chosen as 15%.
 
 ### Finding $\alpha$
 
 In a sample setting, we do not have an analytic distribution over which to take an expectation, so instead we can take a simple average, as
 
 $$
-\frac{1}{n} \sum_{i=1}^{n} (\frac{1}{1+e^{-(\alpha + \beta X)}}) = 0.015.
+\frac{1}{n} \sum_{i=1}^{n} (\frac{1}{1+e^{-(\alpha + \beta X)}}) = 0.15.
 $$
 
 For the sake of simplicity let's choose 10 continuous predictors drawn from the standard normal distribution, $X_j \sim \mathcal{N} (0, 1)$. We'll start with Pavlou et al.'s recommendation on sample size.
 
 ```{r}
-n <- 3171          # sample size (Pavlou's suggestion)
+n <- 613          # sample size (Pavlou's suggestion)
 ```
 
 Next we generate the predictors.
 
 ```{r}
-X <- replicate(params, rnorm(n))      # 613*10 matrix
-colnames(X) <- paste0("x", 1:10)
+X <- replicate(params, rnorm(n))          # 613*10 matrix
+colnames(X) <- paste0("x", 1:p)
 ```
 
 Set the beta coefficients including some zeroes.
@@ -137,7 +137,7 @@ beta <- c(1.1, 0.8, 0.6, 0.4, 0.7, 0.7, 0.7, 0, 0, 0.1)
 Solve for alpha so that logit($\eta$)) = prev. Technically, in R we're solving the following for $\alpha$:
 
 $$
-\frac{1}{n} \sum_{i=1}^{n} (\frac{1}{1 + e^{\alpha + \beta X}}) - 0.015 = 0
+\frac{1}{n} \sum_{i=1}^{n} (\frac{1}{1 + e^{\alpha + \beta X}}) - 0.15 = 0
 $$
 
 ```{r}
@@ -163,16 +163,13 @@ dat$y <- y
 m <- glm(y ~ ., data = dat, family = binomial())
 m
 ```
-
-Apparent calibration slope
-
+Apparent calibration slope (Cox calibration: y ~ lp)
 ```{r}
 lp <- predict(m, type = "link") 
 cal_slope <- coef(glm(y ~ lp, data = dat, family = binomial()))
 cal_slope
 ```
-
-AUC
+# AUC
 
 ```{r}
 library(pROC)

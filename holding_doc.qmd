@@ -1,0 +1,146 @@
+---
+title: "Internal Validation of Clinical Risk Prediction Models"
+date: "29-08-2025"
+author: "Ashley Dickson"
+---
+
+# Introduction
+<p>
+Here I focus on model validation to answer the question of whether internal validation can be a decent proxy for external validation.
+</p>
+
+```{r, message=FALSE}
+library(rms)
+library(dplyr)
+library(ggplot2)
+library(pROC)
+library(tidyr)
+```
+
+In this version, I define a set of basic functions that generate data, get the calibration slope from a model, run a single simulation and then a wider set of simulations, and then create the internal-external boxplot.
+
+```{r}
+set.seed(112358)
+```
+
+Initial function to generate simulation data; to be used twice, for internal and external validation.
+
+```{r}
+gen_data <- function(n, n_preds = 10, intercept = -1.5, coef_value = 0.7) {
+  X <- matrix(rnorm(n * n_preds), nrow = n, ncol = n_preds)
+  colnames(X) <- paste0("x", 1:n_preds)
+  eta <- intercept + X %*% rep(coef_value, n_preds)
+  prob <- 1/(1 + exp(-eta))
+  y <- rbinom(n, 1, prob)
+  return(data.frame(y = y, prob = prob, X))
+}
+```
+
+Function to return key validation metric: calibration slope
+
+```{r}
+get_cal_slope <- function(model, newdata) {
+  lp <- predict(model, newdata = newdata) #lp = linear predictor from rms
+  cal_mod <- glm(y ~ lp, data = newdata, family = binomial)
+  return(cal_mod$coef[2])
+}
+```
+
+Function to create core simulation for a single simulation (couldn't get parallel processing working)
+
+```{r}
+single_simulation <- function(sim_id, n_train, n_ext, n_boot) {
+  train_data <- gen_data(n_train, n_preds = 10, intercept = -1.5, coef_value = 0.7)
+  ext_data <- gen_data(n_ext, n_preds = 10, intercept = -1.5, coef_value = 0.7)
+  
+  dd <- datadist(train_data)
+  options(datadist = dd)
+  on.exit(options(datadist = NULL))
+  
+  model_fn <- paste("y ~", paste(paste0("x", 1:10), collapse = " + "))
+  model <- suppressMessages(suppressWarnings(
+    lrm(as.formula(model_fn), data = train_data, x = TRUE, y = TRUE)
+  ))
+  
+  ext_cal_slope <- get_cal_slope(model, ext_data)
+  boot_val <- validate(model, method = "boot", B = n_boot)
+  boot_cal_slope <- boot_val["Slope", "index.corrected"]
+  
+  return(data.frame(sim = sim_id, n_train = n_train, 
+             ext_cal_slope = ext_cal_slope,
+             boot_cal_slope = boot_cal_slope))
+}
+```
+
+Main function to call simulations setting errors to NA then filtering out.
+
+```{r}
+run_simulation <- function(n_train, n_ext, n_sims = 50, n_boot = 200) {
+  results <- vector("list", n_sims)
+  start_time <- Sys.time()
+  
+  for (i in 1:n_sims) {
+    results[[i]] <- tryCatch({
+      single_simulation(i, n_train, n_ext, n_boot)
+    }, error = function(e) {
+      data.frame(sim = i, n_train = n_train, ext_cal_slope = NA, boot_cal_slope = NA)
+    })
+  }
+  
+  all_results <- do.call(rbind, results)
+  all_results <- all_results[!is.na(all_results$ext_cal_slope), ]
+
+  cat("Sample size n =", n_train, "completed in", 
+      round(as.numeric(Sys.time() - start_time, units = "secs"), 1), "seconds\n\n")
+  
+  return(all_results)
+}
+```
+
+Now let's run the simulation:
+
+```{r}
+total_start_time <- Sys.time()
+sample_sizes <- c(50, 100, 200, 300, 500, 750, 1000, 2000)
+
+all_results <- lapply(sample_sizes, function(n) run_simulation(n, n))
+names(all_results) <- paste0("n_", sample_sizes)
+combined_results <- do.call(rbind, all_results)
+```
+
+A function to create the boxplot: sample sizes on x-axis and CS on y-axis; 2 series.
+
+```{r}
+gen_boxplot <- function(all_results) {
+  plot_data <- all_results %>%
+    select(sim, n_train, ext_cal_slope, boot_cal_slope) %>%
+    pivot_longer(cols = c(ext_cal_slope, boot_cal_slope),
+                 names_to = "validation_type", values_to = "cal_slope") %>%
+    mutate(validation_type = case_when(
+      validation_type == "ext_cal_slope" ~ "External Validation",
+      validation_type == "boot_cal_slope" ~ "Bootstrap Internal Validation"),
+      n_train = factor(n_train)) %>%
+    filter(!is.na(cal_slope))
+  
+  ggplot(plot_data, aes(x = n_train, y = cal_slope, fill = validation_type)) +
+    geom_boxplot(alpha = 0.7, position = position_dodge(0.8)) +
+    scale_fill_manual(values = c("External Validation" = "lightblue", 
+                                "Bootstrap Internal Validation" = "lightcoral")) +
+    labs(title = "Calibration Slope by Sample Size",
+         x = "Sample Size", y = "Calibration Slope", fill = "Validation Type") +
+    scale_y_continuous(limits = c(0, 1.5)) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+          plot.subtitle = element_text(hjust = 0.5, size = 11),
+          legend.position = "bottom")
+}
+```
+
+```{r}
+main_plot <- gen_boxplot(combined_results)
+print(main_plot)
+
+total_runtime <- round(as.numeric(Sys.time() - total_start_time, units = "mins"), 1)
+cat("Total runtime:", total_runtime, "minutes")
+```
+
