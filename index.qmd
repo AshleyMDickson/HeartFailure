@@ -1,183 +1,487 @@
 ---
-title: "Sample Size Calculations"
+title: "Internal Validation & Sample Size in Clinical Risk Prediction Models"
+date: "29-09-2025"
 author: "Ashley Dickson"
-editor: visual
 ---
-
+ 
 ## Introduction
+ 
+In this document, I consider the effect of internal validation requirements on sample size requirements. Recent papers by Riley et al. (YYYY) and Pavlou et al. (YYYY) have made recommendations on the sample size required to achieve a particular level of model performance, usually expressed in terms of the C-statistic and Calibration slope. Inputs to these calculations also depend on the marginal prevalence of the target outcome and the number of prediction parameters to be estimated. Supplying these inputs to Pavlou et al.'s `sampsizedev` package in R, for instance, will yield the recommended sample size, from which further model performance metrics are then derived.
+ 
+However, the sample size recommendations in the literature so far relate to model development. Less attention has been paid to the sample size requirements given the need to internally validate models before they can be used in clinical practice.
+ 
+While external validation is the gold standard, and should be completed prior to deployment into clinical care, it is often not possible or practical for well-established reasons (citation needed). Further, internal validation is needed in model specification and variable selection. The simplest case - sample splitting - illustrates the need for the present study. If we have recruited exactly the right number of patients per the recommendation, then in sample-splitting we will invariably have too few patients for model development and training. The hold-out patients needed to validate will be deleterious on the possible model performance that can be achieved.
+ 
+The solution in the simple case of sample splitting is easy: we simply choose our split ratio (say 70/30) and uplift the recommendation accordingly (i.e. multiply by 1.43, or recruit 43% more patients.) But in other methods of internal validation, the problem is not so simple. In these more interesting cases, we do not know (a) what effect, if any, imposing internal validation requirements on the recommended sample size will have, and (b) where there is an effect, what its size would be. We might hypothesise that k-fold cross validation may have a similar effect to sample splitting, because each trained model is on too small a sample - and no amount of repetition will help. But in bootstrap resampling, all the data are used in both development and testing, so there may be no effect at all.
+ 
+Here I run some simulations to try to answer the question of whether internal validation has a deleterious effect on model performance at the recommended sample size, and if so, by how much the sample size needs to be uplifted to account for it. I keep this first run simple and use standard (non-shrunk) logit models, keeping the number of predictor parameters fixed at 10, and vary the prevalence and hence events per predictor parameter (EPP).
+ 
+## Preliminaries
+ 
+We begin by setting up some essential maths and importing the relevant libraries.
+ 
+```{r, message=FALSE}
+library(samplesizedev)
+library(rsample)
+library(rms)
+library(pROC)
+library(dplyr)
+library(data.table)
 
-In this document, I simulate an approach to clinical risk prediction modelling that begins with sample size requirements, assumes a simple model, and then proceeds to assess options for internal validity. I begin with sample size requirements.
-
-```{r}
-library(pmsampsize) # Riley et al.
-library(samplesizedev) # Menelaos et al.
+# Parallel setup
+library(future)
+library(future.apply)
+n_workers <- max(1L, parallel::detectCores() - 1L)
+plan(multisession, workers = n_workers)
+RNGkind("L'Ecuyer-CMRG")
+ 
+logit <- function(p) log(p/(1 - p))
+expit <- function(x) 1/(1 + exp(-x))
 ```
-
-## Sample Size Requirements
-
-Here I consider two methods of deriving sample size requirements, respectively from Riley et al. (2020), and Pavlou et al. (2024). For each method of deriving sample size requirements, we need to supply the number of predictor parameters in the anticipated model, the overall prevalence of the outcome and the target discriminative skill or calibration level.
-
-```{r}
-params <- 10
-prev <- 0.015
-c_stat <- 0.85
-calib <- 0.9
-```
-
-We can start by getting Riley et al.'s recommendations on sample size given these parameters:
-
-```{r}
-pm_samp <- pmsampsize(type = "b",
-                     cstatistic = c_stat,
-                     parameters = params,
-                     prevalence = prev)
-```
-
-```{r}
-pm_samp$results_table
-```
-
-Riley's recommendation in this scenario is 379, but we know from Pavlou (2024) that this is likely to be inadequate at this relatively high model strength. This paper recommends an increase of 50% in minimum sample size fo achieve a C-statistic of 0.85, and double the size for C=0.9.
-
-(Parenthetically, Riley recommended a higher sample size of 547 at the lower C-statistic of 0.8. It would be good to understand why a smaller sample would be required for better discrimination. Pavlou et al. conclude that the Riley formula performs relatively well at lower strengths.)
-
-Let's retrieve the recommendation from Pavlou et al.
-
-```{r}
-mp_samp <- samplesizedev(outcome = "Binary",
-                        S = 0.9,      # calibration slope
-                        phi = prev,
-                        c = c_stat,
-                        p = params)
-```
-
-```{r}
-mp_samp$sim
-```
-
-The simulation here recommends a minimum sample size of 613 patients. At 15% prevalence this represents 92 events, and at 10 parameters is 9.2 EPP. This represents an increase of 61.6% in EPP compared with Riley.
-
-Pavlou et al. provide expected performance statistics for the model given this set-up.
-
-```{r}
-expected_performance(outcome = "Binary", n = 3171, phi = 0.015, c = 0.85, p = 10)
-```
-
-Hence we can expected to see a calibration slope of 0.901 from our model. This will help guide our assessment of internal validation.
-
-## Simulation Data
-
-Let's now generate some simulation data with a target prevalence of 1.5%, since this forms part of the sample size criteria above. To achieve 1.5% prevalence, we need:
-
+ 
+The expit function is the inverse of the logit function, representing the core logistic model which we use:
+ 
 $$
-Pr(Y=1) = 0.015
+P(Y = 1 \mid X) = \frac{1}{1 + e^{-(\alpha + \beta X)}}
 $$
-
-This is the marginal probability rather than the conditional on $X$. Another way to express this is that the expectation of the dependent variable, $Y$, should be 0.15:
-
-$$
-\mathbb{E}[Y] = 0.015
-$$
-
+ 
+We need a method of creating different data-generating processes (DGPs) for varying prevalence values but with constant beta-coefficients. Let's start with an example and generate some simulation data with a target prevalence of 1.5%. To achieve this, we need $Pr(Y=1) = 0.015$.
+ 
+This is the marginal probability rather than the conditional on $X$. Another way to express this is that the expectation of the dependent variable, $Y$, should be 0.15:$\mathbb{E}[Y] = 0.015$.
+ 
 We know that the dependent variable Y takes on values from the conditional distribution:
-
+ 
 $$
 Y|X \sim Bernoulli (p),
 $$
-
-where $p$ is the conditional probability of success, $p=Pr(Y=1 | X)$. From the definition of the logit transformation,
-
+ 
+where $p$ is the conditional probability of success, $p_i=Pr(Y=1 | X_i)$. From the definition of the logit transformation (and dropping subscript),
+ 
 $$
-log(\frac{p}{1-p}) = \alpha + \beta X
+log(\frac{p}{1-p}) = \alpha + \beta X = \eta
 $$
-
+ 
 we find p as the inverse-logit of the linear predictors
-
+ 
 $$
-p = logit^{-1} (\alpha + \beta X) = \frac{1}{1+e^{-(\alpha + \beta X)}},
+p = logit^{-1} (\eta) = \frac{1}{1+e^{-(\eta)}},
 $$
-
+ 
 which we know is equal to the conditional expectation $\mathbb{E}[Y|X]$. Since $Pr(Y=1)=\mathbb{E}[Y]$, which in turn are equal to the expectation of the conditional probability of success, $\mathbb{E} [Pr(Y=1 | X)]$, we can substitute the logit model to find:
-
+ 
 $$
-\mathbb{E} [ \frac{1}{1+e^{-(\alpha + \beta X)}} ] = 0.015,
+\mathbb{E} [ \frac{1}{1+e^{(-\eta)}} ] = 0.015,
 $$
-
+ 
 where $\beta$ is a vector of coefficients and $X$ is a vector of predictor values.
-
-Once we have chosen our values for $\beta$, we need to solve for $\alpha$ to find the value which guarantees the required level of prevalence, which we have chosen as 1.5%.
-
+ 
+Once we have chosen our values for $\beta$, we need to solve for $\alpha$ to find the value which guarantees the required level of prevalence.
+ 
 ### Finding $\alpha$
-
+ 
 In a sample setting, we do not have an analytic distribution over which to take an expectation, so instead we can take a simple average, as
-
+ 
 $$
-\frac{1}{n} \sum_{i=1}^{n} (\frac{1}{1+e^{-(\alpha + \beta X)}}) = 0.015.
+\frac{1}{n} \sum_{i=1}^{n} (\frac{1}{1+e^{(-\eta)}}) = 0.015.
 $$
-
-For the sake of simplicity let's choose 10 continuous predictors drawn from the standard normal distribution, $X_j \sim \mathcal{N} (0, 1)$. We'll start with Pavlou et al.'s recommendation on sample size.
-
+ 
+For the sake of simplicity we choose 10 continuous predictors drawn from the standard normal distribution, $X_j \sim \mathcal{N} (0, 1)$. We shall come to sample size calculations shortly, but for now let's suppose we have 3,000 records.
+ 
 ```{r}
-n <- 3171          # sample size (Pavlou's suggestion)
+n <- 3000
+prev = 0.015
 ```
-
-Next we generate the predictors.
-
+ 
+Next we generate the predictors and choose the beta coefficients including some zeroes.
+ 
 ```{r}
-X <- replicate(params, rnorm(n))      # 613*10 matrix
+X <- replicate(10, rnorm(n))        #n*10 matrix
 colnames(X) <- paste0("x", 1:10)
-```
-
-Set the beta coefficients including some zeroes.
-
-```{r}
 beta <- c(1.1, 0.8, 0.6, 0.4, 0.7, 0.7, 0.7, 0, 0, 0.1)
 ```
-
-Solve for alpha so that logit($\eta$)) = prev. Technically, in R we're solving the following for $\alpha$:
-
+ 
+Now solve; technically, we're solving the following for $\alpha$:
+ 
 $$
 \frac{1}{n} \sum_{i=1}^{n} (\frac{1}{1 + e^{\alpha + \beta X}}) - 0.015 = 0
 $$
-
+ 
+In R, we can use the `uniroot` function to solve this and and we wrap it into a function for use later on.
+ 
 ```{r}
-inv_logit <- function(z) 1/(1+exp(-z))
-find_alpha  <- function(a) mean(inv_logit(a + as.vector(X %*% beta))) - prev
-alpha    <- uniroot(find_alpha, c(-10, 10))$root
+find_alpha <- function(a) mean(expit(a + as.vector(X %*% beta))) - prev
+alpha <- uniroot(find_alpha, c(-10, 10))$root
 print(alpha)
 ```
-
-With $\alpha = -2.7$ in hand, we can now generate probabilities and outcomes:
-
+ 
+With $\alpha \approx -5.8$ in hand, we can now generate probabilities and outcomes, checking that the prevalence is approximately as expected.
+ 
 ```{r}
-pi <- inv_logit(alpha + as.vector(X %*% beta)) 
+pi <- expit(alpha + as.vector(X %*% beta))
 y <- rbinom(n, 1, pi)
 sum(y)/length(y)
 ```
-
-Fit logistic model and report simple diagnostics
-
+ 
+## Data Generating Process
+ 
+We’ll simulate binary outcomes under a simple logistic model with p = 10 standard normal predictors. Coefficients $\beta$ are drawn once per dataset from N(0,1). We choose the intercept so that the marginal prevalence equals a target prevalence using the method from above. This lets us vary $\phi$ (and thus EPP) directly.
+ 
 ```{r}
-dat <- as.data.frame(X)
-dat$y <- y 
-m <- glm(y ~ ., data = dat, family = binomial())
-m
+simulate_logistic_data <- function(n, p = 10, phi = 0.20) {
+  X <- matrix(rnorm(n * p), n, p)
+  colnames(X) <- paste0("x", seq_len(p))
+  beta <- rnorm(p, 0, 1) # standard normal coefficients
+  xb <- X %*% beta
+ 
+  f <- function(b0) mean(expit(b0 + xb)) - phi
+  b0 <- uniroot(f, c(-12, 12))$root
+ 
+  eta <- b0 + xb
+  p_true <- expit(eta)
+  y <- rbinom(n, 1, p_true)
+ 
+  list(
+    df  = cbind(as.data.frame(X), y = y),
+    beta = beta,
+    b0   = b0,
+    phi  = phi
+  )
+}
 ```
-
-Apparent calibration slope
-
+ 
+This DGP is capable of generating a dataset for model development and testing of any sample size with a fixed number of Predictor Parameters and a variable prevalence, $\phi$. Next we'll need some supporting functions that we can use to easily fit the relevant logistic model to each sample and to generate predictions in new data (which will be needed for validation). I've also given a simple function to bring together a collection of performance metrics to be used across validation methods (and which can be updated in due course.) It take an outcome $y$, a predicted probability, and a vector of linear predictors as inputs.
+ 
 ```{r}
-lp <- predict(m, type = "link") 
-cal_slope <- coef(glm(y ~ lp, data = dat, family = binomial()))
-cal_slope
+fit_logistic <- function(df, formula) glm(formula, data = df, family = binomial())
+predict_prob <- function(mod, newdata) predict(mod, newdata, type = "response")
+ 
+# Perf. metrics
+calc_metrics <- function(y, p, lp = qlogis(pmin(pmax(p, 1e-6), 1 - 1e-6))) {
+  data.frame(
+    AUC      = as.numeric(pROC::roc(y, p, quiet = TRUE)$auc),
+    CalSlope = coef(glm(y ~ lp, family = binomial()))[2],
+    Brier    = mean((p - y)^2),
+    MAPE     = mean(abs(p - y))
+  )
+}
 ```
-
-AUC
-
+ 
+## Validation Procedures
+ 
+To understand the optimism of a given model, we first need to understand its apparent performance, which is unadjusted and assesses predictive performance in the training data. To assess this, we need to supply a function with the original (training) dataset and the model formula used in estimation.
+ 
 ```{r}
-library(pROC)
+apparent_perf <- function(df, formula) {
+  mod <- fit_logistic(df, formula)
+  p   <- predict_prob(mod, df)
+  lp  <- predict(mod, type = "link")
+  list(metrics = calc_metrics(df$y, p, lp), model = mod)
+}
 ```
+ 
+Having calculated apparent performance, we can then go on the calulate k-fold Cross Validation performance in which we take $k$ resamples, train on $k-1$ of them and test on the remaining resample, and do this k times (once for each resample).
+ 
+ 
 ```{r}
-auc_val <- as.numeric(auc(roc(y, predict(m, type="response"), quiet=TRUE)))
-list(realized_prevalence = mean(y), alpha = alpha, calibration_slope_app = cal_slope , AUC_app = auc_val )
+kfold_cv_mean <- function(df, formula, K = 10) {
+  folds <- rsample::vfold_cv(df, v = K, strata = "y")
+  mets <- lapply(folds$splits, function(sp) {
+    train <- rsample::analysis(sp)
+    test  <- rsample::assessment(sp)
+    mod   <- fit_logistic(train, formula)
+    p     <- predict_prob(mod, test)
+    lp    <- predict(mod, newdata = test, type = "link")
+    calc_metrics(test$y, p, lp)
+  })
+  out <- Reduce(`+`, mets) / length(mets)
+  as.data.frame(out)
+}
 ```
+ 
+Here I have used a simple mean of the performance metric across the folds. This is not optimal and in the next version will include pooled predictions in Cross Validation if it is deemed a productive line of enquiry.
+ 
+Next I set up the function to run the Bootstrap validation, which resamples the data with replacement 200 times (by convention), fits the model on the resample and generates in-bag and out-of-bag predictions to calculate the optimism (as mean(in - out) and corrects it.
+ 
+```{r}
+bootstrap_optimism <- function(df, formula, B = 200) {
+  app_full <- apparent_perf(df, formula)$metrics
+  n <- nrow(df)
+  opt_mat <- replicate(B, {
+    idx <- sample.int(n, n, replace = TRUE)
+    dfb <- df[idx, ]
+    mod <- fit_logistic(dfb, formula)
+    # in-bag
+    p_in  <- predict_prob(mod, dfb)
+    lp_in <- predict(mod, newdata = dfb, type = "link")
+    m_in  <- calc_metrics(dfb$y, p_in, lp_in)
+    # out-of-bag (original dev data)
+    p_out  <- predict_prob(mod, df)
+    lp_out <- predict(mod, newdata = df, type = "link")
+    m_out  <- calc_metrics(df$y, p_out, lp_out)
+    unlist(m_in - m_out)
+  })
+  optimism <- rowMeans(opt_mat)
+  corrected <- as.numeric(app_full) - optimism
+  names(corrected) <- names(app_full)
+  as.data.frame(as.list(corrected))
+}
+```
+ 
+Finally in this section, I provide a simple method of external validation such that we can compare internally-validated performance with 'true', gold-standard external. I generate some new logistic data using the same Data Generating Process from the `simulate_logistic_data()` method.
+ 
+```{r}
+external_perf <- function(fitted_model, p, phi, N_ext = 200000) {
+  sim_ext <- simulate_logistic_data(N_ext, p = p, phi = phi)
+  df_ext  <- sim_ext$df
+  p_hat   <- predict_prob(fitted_model, df_ext)
+  lp_hat  <- predict(fitted_model, newdata = df_ext, type = "link")
+  calc_metrics(df_ext$y, p_hat, lp_hat)
+}
+```
+ 
+By drawing 200,000 samples as the external dataset we are able to approach the asymptotic domain and draw inferences accordingly when making the comparison with internally-validated model performance.
+ 
+## Initial Sample Size Recommendation
+ 
+In the simulation scenarios below, I start with the recommended sample size from Pavlou et al.'s `samplesizedev` package. I assume that the target calibration slope is $CS_{target} = 0.9$ for simplicity; this can be varied in future.
+ 
+```{r}
+pavlou_dev_n <- function(p, phi, c_stat, target_slope = 0.90) {
+  ss <- samplesizedev(outcome = "Binary", S = target_slope, phi = phi, c = c_stat, p = p)
+  list(N_sim = ss$sim, N_rvs = ss$rvs)  # use N_sim for primary decisions
+}
+```
+ 
+At this sample size, we can invoke Pavlou's `expected_performance` method such that we can compare with the external performance results and then understand the damage, if any, to model performance estimates.
+ 
+```{r}
+pavlou_expected <- function(n, p, phi, c_stat) {
+  expected_performance(outcome = "Binary", n = n, phi = phi, c = c_stat, p = p)
+}
+```
+ 
+We’ll centre our scenarios around Pavlou’s N (targeting S=0.90, by default), then test a few multipliers below/above to see what internal validation needs to be trustworthy.
+ 
+## A Single Simulation Run
+ 
+With this setup in hand, we can generate a single simulation run using the simulated data, validation methods, and performance metric calculations.
+ 
+```{r}
+run_rep <- function(n, p = 10, phi = 0.20,
+                    B_boot = 200, K = 10, c_stat_anticipated = 0.80) {
+ 
+  sim <- simulate_logistic_data(n, p, phi)
+  df  <- sim$df
+  form <- as.formula(paste("y ~", paste(colnames(df)[colnames(df) != "y"], collapse = " + ")))
+ 
+  # Run validation methods
+  app  <- apparent_perf(df, form)
+  boot <- bootstrap_optimism(df, form, B = B_boot)
+  cv   <- kfold_cv_mean(df, form, K = K)
+  ext  <- external_perf(app$model, p, phi)
+ 
+  # Extract metrics
+  AUC_app    <- app$metrics$AUC
+  AUC_boot   <- boot$AUC
+  AUC_cv     <- cv$AUC
+  AUC_ext    <- ext$AUC
+ 
+  Slope_app  <- app$metrics$CalSlope
+  Slope_boot <- boot$CalSlope
+  Slope_cv   <- cv$CalSlope
+  Slope_ext  <- ext$CalSlope
+ 
+  Brier_app  <- app$metrics$Brier
+  Brier_boot <- boot$Brier
+  Brier_cv   <- cv$Brier
+  Brier_ext  <- ext$Brier
+ 
+  MAPE_app   <- app$metrics$MAPE
+  MAPE_boot  <- boot$MAPE
+  MAPE_cv    <- cv$MAPE
+  MAPE_ext   <- ext$MAPE
+ 
+  pav_N      <- pavlou_dev_n(p, phi, c_stat_anticipated, target_slope = 0.90)
+  exp_at_n   <- pavlou_expected(n, p, phi, c_stat_anticipated)
+ 
+  # Combine rows
+  data.frame(
+    n = n, p = p, phi = phi, EPP = n * phi / p,
+ 
+    AUC_app = AUC_app,     AUC_boot = AUC_boot,     AUC_cv = AUC_cv,     AUC_ext = AUC_ext,
+    Slope_app = Slope_app, Slope_boot = Slope_boot, Slope_cv = Slope_cv, Slope_ext = Slope_ext,
+    Brier_app = Brier_app, Brier_boot = Brier_boot, Brier_cv = Brier_cv, Brier_ext = Brier_ext,
+    MAPE_app  = MAPE_app,  MAPE_boot  = MAPE_boot,  MAPE_cv  = MAPE_cv,  MAPE_ext  = MAPE_ext,
+ 
+    dAUC_app   = AUC_app   - AUC_ext,
+    dAUC_boot  = AUC_boot  - AUC_ext,
+    dAUC_cv    = AUC_cv    - AUC_ext,
+ 
+    dSlope_app = Slope_app - Slope_ext,
+    dSlope_boot= Slope_boot- Slope_ext,
+    dSlope_cv  = Slope_cv  - Slope_ext,
+ 
+    dBrier_app = Brier_app - Brier_ext,
+    dBrier_boot= Brier_boot- Brier_ext,
+    dBrier_cv  = Brier_cv  - Brier_ext,
+ 
+    dMAPE_app  = MAPE_app  - MAPE_ext,
+    dMAPE_boot = MAPE_boot - MAPE_ext,
+    dMAPE_cv   = MAPE_cv   - MAPE_ext,
+ 
+    N_Pavlou_sim = pav_N$N_sim,
+    #N_Pavlou_RvS = pav_N$rvs, 
+    ExpSlope_at_n = exp_at_n["Mean_calibration_slope"],
+    ExpMAPE_at_n  = exp_at_n["Mean_MAPE"]
+  )
+}
+ 
+```
+ 
+Each replication (i) computes internal validation performance, (ii) compares it to a large-sample external benchmark (bias), and (iii) records Pavlou’s recommended N and expected calibration/MAPE at the candidate n.
+ 
+## Scenario Grid
+ 
+We now want to run the scenario over multipliers of the sample size and populate a grid with the prevalence values, recommended sample sizes, and sample sizes that are scaled up according to the multipliers. The resulting dataframe gives all combinations of these.
+
+With the `simulation_grid` function I then run the above single simulation over the set of scenarios and collects all results into a single table. This is run 200 times by default, but this can be scaled up.
+ 
+```{r}
+build_grid_from_pavlou <- function(phi_vals, p = 10, c_stat = 0.80, target_slope = 0.90,
+                                   multipliers = c(1.0, 1.3, 1.6, 2.0)) {
+  rows <- lapply(phi_vals, function(phi) {
+    Ns <- pavlou_dev_n(p = p, phi = phi, c_stat = c_stat, target_slope = target_slope)$N_sim
+    data.frame(n = round(Ns * multipliers), phi = phi)
+  })
+  do.call(rbind, rows)
+}
+ 
+# simulation over the grid
+simulate_grid_parallel <- function(grid, n_reps = 200, B_boot = 200, K = 10, 
+                                   c_stat_anticipated = 0.80) {
+
+  # make a task table: one row per (scenario, replication)
+  task_df <- do.call(
+    rbind,
+    lapply(seq_len(nrow(grid)), function(g) {
+      data.frame(
+        n   = grid$n[g],
+        phi = grid$phi[g],
+        rep = seq_len(n_reps)
+      )
+    })
+  )
+  # run one replication per task in parallel
+  res_list <- future_lapply(
+    seq_len(nrow(task_df)),
+    function(i) {
+      run_rep(
+        n = task_df$n[i],
+        p = 10,
+        phi = task_df$phi[i],
+        B_boot = B_boot,
+        K = K,
+        c_stat_anticipated = c_stat_anticipated
+      )
+    },
+    future.seed = TRUE  # reproducible across workers
+  )
+  data.table::rbindlist(res_list)
+}
+```
+ 
+For each prevalence value, we get the `samplesizedev` recommendation and evaluate n at (0.7, 1.0, 1.3, 1.6) × N. This whether internal validation good enough at Pavlou’s N and if not, how much larger does n need to be.
+ 
+```{r}
+summarise_results <- function(dt, slope_tol = 0.05) {
+  
+  summarize_metric <- function(dt, metric) {
+    methods <- c("app" = "Apparent", "boot" = "Bootstrap", "cv" = "kfoldMean")
+    
+    data.table::rbindlist(lapply(names(methods), function(m) {
+      col_name <- paste0("d", metric, "_", m)
+      dt[, .(bias = mean(get(col_name)),
+             sd   = sd(get(col_name)),
+             rmse = sqrt(mean(get(col_name)^2)),
+             method = methods[m]),
+         by = .(n, phi, EPP)]
+    }))[, metric := metric][]
+  }
+ 
+  mets <- c("AUC", "Slope", "Brier", "MAPE")
+  perf <- data.table::rbindlist(lapply(mets, function(m) summarize_metric(dt, m)))
+ 
+  # Sufficiency here means is the median bias within tolerance?
+  suff <- dt[, .(
+    med_Slope_boot = median(Slope_boot, na.rm = TRUE),
+    med_Slope_ext  = median(Slope_ext,  na.rm = TRUE),
+    ok_calib       = abs(median(dSlope_boot, na.rm = TRUE)) <= slope_tol
+  ), by = .(n, phi, EPP)]
+ 
+  list(perf = perf, sufficiency = suff)
+}
+```
+ 
+The sufficiency flag reports whether bootstrap-corrected internal validation is close enough to external (within a tolerance of 0.05 on slope). Now we build a grid of results drawing on Pavlou's recommended sample sizes and the set of multipliers to ascertain sufficiency.
+ 
+```{}
+set.seed(112358)
+
+phi_vals <- c(0.05, 0.10, 0.20, 0.40)
+grid <- build_grid_from_pavlou(phi_vals, p = 10, c_stat = 0.80, target_slope = 0.90)
+
+# Parallel run
+sim_dt <- simulate_grid_parallel(
+  grid,
+  n_reps = 30,
+  B_boot = 100,
+  K = 10,
+  c_stat_anticipated = 0.80
+)
+
+sum_out <- summarise_results(sim_dt, slope_tol = 0.05)
+perf_summary <- sum_out$perf
+calib_ok     <- sum_out$sufficiency
+```
+ 
+Need to increase n_reps and B_boot values when running correctly.
+ 
+```{}
+# Which (phi, n) combos meet the calibration tolerance?
+calib_ok %>%
+  arrange(phi, n) %>%
+  print(n = 50)
+ 
+# Compare Pavlou's expected slope at n vs empirical bootstrap & external
+sim_dt %>%
+  select(n, phi, EPP, Slope_boot, Slope_ext, ExpSlope_at_n) %>%
+  group_by(n, phi, EPP) %>%
+  summarise(med_boot = median(Slope_boot),
+            med_ext  = median(Slope_ext),
+            exp_slope = first(ExpSlope_at_n),
+            .groups = "drop") %>%
+  arrange(phi, n) %>%
+  print(n = 50)
+ 
+# Bias summaries (AUC and slope) by method
+perf_summary %>%
+  filter(metric %in% c("AUC", "Slope")) %>%
+  arrange(metric, phi, n, method) %>%
+  print(n = 80)
+```
+ 
+## TODO
+Plot (i) heatmaps of sufficiency over {prevalence × multiplier}, and (ii) bias vs. EPP line charts by method.
+ 
+Notes
+ 
+Core question: At Pavlou’s recommended N (for target S=0.90), are internal validation estimates (especially bootstrap) sufficiently close to external?
+ 
+If not, how much larger N is needed? The multipliers point toward answer.
+ 
+Prevalence makes a difference by fixing p = 10 and varying #\phi#, you naturally vary EPP, which is often considered in the literature.
+ 
+Here I've used mean-of-folds in CV; a development will involve pooled-predictions as a robustness check.
+ 
+## Plots
+ 

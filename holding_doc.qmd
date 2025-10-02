@@ -1,146 +1,118 @@
 ---
 title: "Internal Validation of Clinical Risk Prediction Models"
-date: "29-08-2025"
+date: "29-09-2025"
 author: "Ashley Dickson"
 ---
 
-# Introduction
-<p>
-Here I focus on model validation to answer the question of whether internal validation can be a decent proxy for external validation.
-</p>
+## Introduction
+
+In this document, I consider the effect of internal validation requirements on sample size requirements. Recent papers by Riley et al. (YYYY) and Pavlou et al. (YYYY) have made recommendations on the sample size required to achieve a particular level of model performance, usually expressed in terms of the C-statistic and Calibration slope. Inputs to these calculations also depend on the marginal prevalence of the target outcome and the number of prediction parameters to be estimated. Supplying these inputs to Pavlou et al.'s `sampsizedev` package in R, for instance, will yield the recommended sample size, from which further model performance metrics can then be derived.
+
+However, the recommended sample size in the literature so far relate to model development in risk prediction, focusing on Calibration Slope and Mean Absolute Prediction Error (MAPE) in this context. Less attention has been paid to the sample size requirements given the need to internally validate models before they can be used in clinical practice.
+
+While external validation is the gold standard, and should also be a necessary for deployment into clinical care, it is often not possible or practical for well-established reasons (citation needed). Further, internal validation is needed in model specification and variable selection. The simplest case - sample splitting - illustrates the need for the present study. If we have recruited exactly the right number of patients per the recommendation, then in sample-splitting we will invariably have too few patients for model development and training. The hold-out patients needed to validate will be deleterious on the possible model performance that can be achieved.
+
+The solution in the simple case of sample splitting is easy: we simply choose our ratio split (say 70/30) and uplift the recommendation accordingly (i.e. multiply by 1.43, or recruit 43% more patients.) In other methods of internal validation, the problem is not so simple. We do not know (a) what effect, if any, imposing internal validation requirements on the recommended sample size will have, and (b) if there is an effect, what its size would be. We might hypothesise that k-fold cross validation may have a similar effect to sample splitting, because each trained model is on too small a sample - and no amount of repetition will help. But in bootstrap resampling, all the data are used in both development and testing, so there may be no effect at all.
+
+Here I run some simulations to try to answer the question of whether internal validation has a deleterious effect on model performance at the recommended sample size, and if so, by how much the sample size needs to be uplifted to account for it. I keep this first run simple and use standard (non-shrinkage) logit models, keep the number of predictor parameters fixed at 10, and vary the prevalence and hence events per predictor parameter (EPP).
+
+## Set-up
+
+We begin by setting up some essential mathematical functions and importing the relevant libraries.
 
 ```{r, message=FALSE}
+library(samplesizedev)
+library(rsample)
 library(rms)
-library(dplyr)
-library(ggplot2)
 library(pROC)
-library(tidyr)
+library(dplyr)
+library(data.table)
+
+logit <- function(p) log(p/(1 - p))
+expit <- function(x) 1/(1 + exp(-x))
 ```
 
-In this version, I define a set of basic functions that generate data, get the calibration slope from a model, run a single simulation and then a wider set of simulations, and then create the internal-external boxplot.
+The expit function is the inverse of the logit function, representing the core logistic model which we use:
+
+$$
+P(Y = 1 \mid X) = \frac{1}{1 + e^{-(\alpha + \beta X)}}
+$$
+
+We need a method of creating different data-generating processes (DGPs) for varying prevalence values but with constant beta-coefficients. Let's start with an example and generate some simulation data with a target prevalence of 1.5%. To achieve this, we need $Pr(Y=1) = 0.015$.
+
+This is the marginal probability rather than the conditional on $X$. Another way to express this is that the expectation of the dependent variable, $Y$, should be 0.15:$\mathbb{E}[Y] = 0.015$.
+
+We know that the dependent variable Y takes on values from the conditional distribution:
+
+$$
+Y|X \sim Bernoulli (p),
+$$
+
+where $p$ is the conditional probability of success, $p_i=Pr(Y=1 | X_i)$. From the definition of the logit transformation (and dropping subscript),
+
+$$
+log(\frac{p}{1-p}) = \alpha + \beta X = \eta
+$$
+
+we find p as the inverse-logit of the linear predictors
+
+$$
+p = logit^{-1} (\eta) = \frac{1}{1+e^{-(\eta)}},
+$$
+
+which we know is equal to the conditional expectation $\mathbb{E}[Y|X]$. Since $Pr(Y=1)=\mathbb{E}[Y]$, which in turn are equal to the expectation of the conditional probability of success, $\mathbb{E} [Pr(Y=1 | X)]$, we can substitute the logit model to find:
+
+$$
+\mathbb{E} [ \frac{1}{1+e^{(-\eta)}} ] = 0.015,
+$$
+
+where $\beta$ is a vector of coefficients and $X$ is a vector of predictor values.
+
+Once we have chosen our values for $\beta$, we need to solve for $\alpha$ to find the value which guarantees the required level of prevalence.
+
+### Finding $\alpha$
+
+In a sample setting, we do not have an analytic distribution over which to take an expectation, so instead we can take a simple average, as
+
+$$
+\frac{1}{n} \sum_{i=1}^{n} (\frac{1}{1+e^{(-\eta)}}) = 0.015.
+$$
+
+For the sake of simplicity we choose 10 continuous predictors drawn from the standard normal distribution, $X_j \sim \mathcal{N} (0, 1)$. We shall come to sample size calculations shortly, but for now let's suppose we have 3,000 records.
 
 ```{r}
-set.seed(112358)
+n <- 3000
+prev = 0.015
 ```
 
-Initial function to generate simulation data; to be used twice, for internal and external validation.
+Next we generate the predictors and choose the beta coefficients including some zeroes.
 
 ```{r}
-gen_data <- function(n, n_preds = 10, intercept = -1.5, coef_value = 0.7) {
-  X <- matrix(rnorm(n * n_preds), nrow = n, ncol = n_preds)
-  colnames(X) <- paste0("x", 1:n_preds)
-  eta <- intercept + X %*% rep(coef_value, n_preds)
-  prob <- 1/(1 + exp(-eta))
-  y <- rbinom(n, 1, prob)
-  return(data.frame(y = y, prob = prob, X))
-}
+X <- replicate(10, rnorm(n))        #n*10 matrix
+colnames(X) <- paste0("x", 1:10)
+beta <- c(1.1, 0.8, 0.6, 0.4, 0.7, 0.7, 0.7, 0, 0, 0.1)
 ```
 
-Function to return key validation metric: calibration slope
+Now solve; technically, we're solving the following for $\alpha$:
+
+$$
+\frac{1}{n} \sum_{i=1}^{n} (\frac{1}{1 + e^{\alpha + \beta X}}) - 0.015 = 0
+$$
+
+In R, we can use the `uniroot` function to solve this and and we wrap it into a function for use later on.
 
 ```{r}
-get_cal_slope <- function(model, newdata) {
-  lp <- predict(model, newdata = newdata) #lp = linear predictor from rms
-  cal_mod <- glm(y ~ lp, data = newdata, family = binomial)
-  return(cal_mod$coef[2])
-}
+find_alpha <- function(a) mean(expit(a + as.vector(X %*% beta))) - prev
+alpha <- uniroot(find_alpha, c(-10, 10))$root
+print(alpha)
 ```
 
-Function to create core simulation for a single simulation (couldn't get parallel processing working)
+With $\alpha = -5.88$ in hand, we can now generate probabilities and outcomes, checking that the prevalence is as expected.
 
 ```{r}
-single_simulation <- function(sim_id, n_train, n_ext, n_boot) {
-  train_data <- gen_data(n_train, n_preds = 10, intercept = -1.5, coef_value = 0.7)
-  ext_data <- gen_data(n_ext, n_preds = 10, intercept = -1.5, coef_value = 0.7)
-  
-  dd <- datadist(train_data)
-  options(datadist = dd)
-  on.exit(options(datadist = NULL))
-  
-  model_fn <- paste("y ~", paste(paste0("x", 1:10), collapse = " + "))
-  model <- suppressMessages(suppressWarnings(
-    lrm(as.formula(model_fn), data = train_data, x = TRUE, y = TRUE)
-  ))
-  
-  ext_cal_slope <- get_cal_slope(model, ext_data)
-  boot_val <- validate(model, method = "boot", B = n_boot)
-  boot_cal_slope <- boot_val["Slope", "index.corrected"]
-  
-  return(data.frame(sim = sim_id, n_train = n_train, 
-             ext_cal_slope = ext_cal_slope,
-             boot_cal_slope = boot_cal_slope))
-}
+pi <- inv_logit(alpha + as.vector(X %*% beta)) 
+y <- rbinom(n, 1, pi)
+sum(y)/length(y)
 ```
 
-Main function to call simulations setting errors to NA then filtering out.
-
-```{r}
-run_simulation <- function(n_train, n_ext, n_sims = 50, n_boot = 200) {
-  results <- vector("list", n_sims)
-  start_time <- Sys.time()
-  
-  for (i in 1:n_sims) {
-    results[[i]] <- tryCatch({
-      single_simulation(i, n_train, n_ext, n_boot)
-    }, error = function(e) {
-      data.frame(sim = i, n_train = n_train, ext_cal_slope = NA, boot_cal_slope = NA)
-    })
-  }
-  
-  all_results <- do.call(rbind, results)
-  all_results <- all_results[!is.na(all_results$ext_cal_slope), ]
-
-  cat("Sample size n =", n_train, "completed in", 
-      round(as.numeric(Sys.time() - start_time, units = "secs"), 1), "seconds\n\n")
-  
-  return(all_results)
-}
-```
-
-Now let's run the simulation:
-
-```{r}
-total_start_time <- Sys.time()
-sample_sizes <- c(50, 100, 200, 300, 500, 750, 1000, 2000)
-
-all_results <- lapply(sample_sizes, function(n) run_simulation(n, n))
-names(all_results) <- paste0("n_", sample_sizes)
-combined_results <- do.call(rbind, all_results)
-```
-
-A function to create the boxplot: sample sizes on x-axis and CS on y-axis; 2 series.
-
-```{r}
-gen_boxplot <- function(all_results) {
-  plot_data <- all_results %>%
-    select(sim, n_train, ext_cal_slope, boot_cal_slope) %>%
-    pivot_longer(cols = c(ext_cal_slope, boot_cal_slope),
-                 names_to = "validation_type", values_to = "cal_slope") %>%
-    mutate(validation_type = case_when(
-      validation_type == "ext_cal_slope" ~ "External Validation",
-      validation_type == "boot_cal_slope" ~ "Bootstrap Internal Validation"),
-      n_train = factor(n_train)) %>%
-    filter(!is.na(cal_slope))
-  
-  ggplot(plot_data, aes(x = n_train, y = cal_slope, fill = validation_type)) +
-    geom_boxplot(alpha = 0.7, position = position_dodge(0.8)) +
-    scale_fill_manual(values = c("External Validation" = "lightblue", 
-                                "Bootstrap Internal Validation" = "lightcoral")) +
-    labs(title = "Calibration Slope by Sample Size",
-         x = "Sample Size", y = "Calibration Slope", fill = "Validation Type") +
-    scale_y_continuous(limits = c(0, 1.5)) +
-    theme_minimal() +
-    theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-          plot.subtitle = element_text(hjust = 0.5, size = 11),
-          legend.position = "bottom")
-}
-```
-
-```{r}
-main_plot <- gen_boxplot(combined_results)
-print(main_plot)
-
-total_runtime <- round(as.numeric(Sys.time() - total_start_time, units = "mins"), 1)
-cat("Total runtime:", total_runtime, "minutes")
-```
 

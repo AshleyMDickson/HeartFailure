@@ -1,6 +1,9 @@
 project:
   type: website
   output-dir: docs
+  render:
+    - index.qmd          # only this page
+    # - pages/*.qmd      # (example) allow a folder of pages later
 
 website:
   title: "Modelling Binary Outcomes"
